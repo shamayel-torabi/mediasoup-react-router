@@ -2,7 +2,7 @@ import { Form } from "react-router";
 import type { Route } from "./+types/_dashboard.users";
 import type { User } from "~/types";
 import { Spinner } from "~/components/Spinner";
-import { getUsers } from "~/.server/user";
+import { deleteUser, getUsers } from "~/.server/user";
 
 export function meta({ }: Route.MetaArgs) {
   return [
@@ -37,13 +37,7 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
   const id = formData.get("id") as string;
 
   try {
-    const response = await fetch(`http://127.0.0.1:3031/api/auth/users/${id}`, {
-      method: 'DELETE',
-    });
-    if (!response.ok) {
-      const { error } = await response.json()
-      return { error: error }
-    }
+    await deleteUser(id);    
   } catch (error) {
     console.error(error);
     return { error: error }
