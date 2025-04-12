@@ -40,7 +40,7 @@ export function meta({ }: Route.MetaArgs) {
     ];
 }
 
-export async function action({ request }: Route.ClientActionArgs): Promise<ActionProps | undefined> {
+export async function action({ request }: Route.ClientActionArgs) : Promise<Response | ActionProps | undefined> {
     const formData = await request.formData();
 
     const result = registerUserSchema.safeParse({
@@ -68,7 +68,7 @@ export async function action({ request }: Route.ClientActionArgs): Promise<Actio
         const user = await createUser(email, password, role, firstName, lastName);
 
         if(user){
-            throw redirect("/login");
+            return redirect("/login");
         }
 
     } catch (error) {

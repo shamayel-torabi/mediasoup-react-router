@@ -30,7 +30,7 @@ export const getUsers = async () => {
 
 export const getUserByEmail = async (email: string) => {
   try {
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await prisma.user.findUnique({ where: { email } }) as User & {password: string};
     return user;
   } catch (error) {
     console.log(error);

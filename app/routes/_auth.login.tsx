@@ -4,7 +4,8 @@ import { Card } from "~/components/Card";
 import { Errors } from "~/components/Errors";
 import type { Route } from "./+types/_auth.login";
 import { createUserSession, getUserId } from "~/.server/session";
-
+import { getUserByEmail } from "~/.server/user";
+import bcrypt from 'bcrypt';
 
 export function meta({ }: Route.MetaArgs) {
   return [
@@ -40,8 +41,8 @@ export async function action({ request }: Route.ActionArgs): Promise<ActionProps
   let response: Response;
   try {
     const formData = await request.formData();
-    const email = formData.get("email")?.toString();
-    const password = formData.get("password")?.toString();
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
 
     const result = loginUserSchema.safeParse({ email, password });
 
@@ -51,15 +52,20 @@ export async function action({ request }: Route.ActionArgs): Promise<ActionProps
       };
     }
 
-    // Check the user's credentials
-    if (email !== "shamayel.torabi@gmail.com" || password !== "sham") {
-      throw new Error("رایانامه یا گذرواژه اشتباه است!");
+    const user = await getUserByEmail(email);
+    if (!user || !user?.password) {
+      throw Error('رایانامه یا گذرواژه اشتباه است')
+    }
+
+    const isPasswordMatch = await bcrypt.compare(password, user.password);
+    if (!isPasswordMatch) {
+      throw Error('رایانامه یا گذرواژه اشتباه است')
     }
 
     // Create a session
     response = await createUserSession({
       request,
-      userId: email,
+      userId: user.id,
       remember: true,
     });
 
@@ -67,23 +73,12 @@ export async function action({ request }: Route.ActionArgs): Promise<ActionProps
       throw new Error("یک خطا هنگام ایجاد جلسه رخ داده است!");
     }
   } catch (error) {
-    if (error instanceof Error) {
-
-      return {
-        errors: {
-          _errors: [],
-          customError: {
-            _errors: [error.message]
-          }
-        }
-      };
-    }
-
+    const errorMessage = error instanceof Error ? error.message : 'یک خطای ناشناخته رخ داده است!'
     return {
       errors: {
         _errors: [],
         customError: {
-          _errors: ['یک خطای ناشناخته رخ داده است!']
+          _errors: [errorMessage]
         }
       }
     };

@@ -1,8 +1,8 @@
 import { Form } from "react-router";
-import type { Route } from "./+types/_dashboard.users";
 import type { User } from "~/types";
 import { Spinner } from "~/components/Spinner";
 import { deleteUser, getUsers } from "~/.server/user";
+import type { Route } from "./+types/_main.users";
 
 export function meta({ }: Route.MetaArgs) {
   return [
@@ -32,12 +32,12 @@ export function HydrateFallback() {
   return <Spinner />
 }
 
-export async function clientAction({ request }: Route.ClientActionArgs) {
+export async function action({ request }: Route.ClientActionArgs) {
   const formData = await request.formData();
   const id = formData.get("id") as string;
 
   try {
-    await deleteUser(id);    
+    const user = await deleteUser(id);
   } catch (error) {
     console.error(error);
     return { error: error }
