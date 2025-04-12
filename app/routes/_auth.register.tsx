@@ -3,6 +3,7 @@ import { Form, Link, redirect } from "react-router";
 import { z, type ZodFormattedError } from "zod";
 import { Errors } from "~/components/Errors";
 import type { Route } from "./+types/_auth.register";
+import { createUser, getUserByEmail } from "~/.server/user";
 
 const registerUserSchema = z.object({
     email: z.string({ required_error: "ریانامه باید وارد شود" })
@@ -39,7 +40,7 @@ export function meta({ }: Route.MetaArgs) {
     ];
 }
 
-export async function action({ request }: Route.ClientActionArgs): Promise<ActionProps> {
+export async function action({ request }: Route.ClientActionArgs): Promise<ActionProps | undefined> {
     const formData = await request.formData();
 
     const result = registerUserSchema.safeParse({
@@ -60,6 +61,15 @@ export async function action({ request }: Route.ClientActionArgs): Promise<Actio
 
     try {
         const role = 'user';
+        const recordedUser = await getUserByEmail(email);
+        if(recordedUser)
+            throw new Error('کاربری با این رایانامه وجود دارد')
+
+        const user = await createUser(email, password, role, firstName, lastName);
+
+        if(user){
+            throw redirect("/login");
+        }
 
     } catch (error) {
         console.log(error)

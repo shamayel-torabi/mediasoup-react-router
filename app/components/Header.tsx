@@ -13,27 +13,17 @@ const MenuItem = ({ url, title, onClick }: { url: string, title: string, onClick
 }
 
 const AuthStatus = ({ userId }: { userId: string | undefined }) => {
-    if (!userId) {
+    if (userId) {
         return (
-            <li>
-                <NavLink
-                    className="block py-2 px-3 rounded-sm md:bg-transparent text-blue-950 md:p-0 dark:text-white md:dark:text-blue-500"
-                    to='/login'>ورود
-                </NavLink>
+            <li >
+                <Form action="/logout" method="post">
+                    <button type="submit" className="block cursor-pointer py-2 px-3 rounded-sm md:bg-transparent text-blue-950 md:p-0 dark:text-white md:dark:text-blue-500">
+                        خروج
+                    </button>
+                </Form>
             </li>
         )
     }
-
-    return (
-        <li >
-            <Form action="/logout" method="post">
-                <button type="submit" className="block py-2 px-3 rounded-sm md:bg-transparent text-blue-950 md:p-0 dark:text-white md:dark:text-blue-500">
-                    خروج
-                </button>
-            </Form>
-        </li>
-
-    );
 }
 
 export default function Header({ userId }: { userId: string | undefined }) {

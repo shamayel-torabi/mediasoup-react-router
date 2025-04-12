@@ -1,6 +1,4 @@
 import { useMediaContext } from "~/components/MediaProvider";
-import { getUserId } from "~/.server/session";
-import { redirect } from "react-router";
 import type { Route } from "./+types/_main._index";
 
 export function meta({ }: Route.MetaArgs) {
@@ -10,17 +8,8 @@ export function meta({ }: Route.MetaArgs) {
   ];
 }
 
-export async function loader({ request }: Route.LoaderArgs) {
-  // Check if the user is already logged in
-  const userId = await getUserId(request);
-  if (!userId) {
-    throw redirect("/login");
-  } else {
-    return { userId };
-  }
-}
 
-export default function Home({ loaderData }: Route.ComponentProps) {
+export default function Home() {
   const { messages, sendMessage } = useMediaContext()
 
   const handleSubmit = async (e: React.FocusEvent<HTMLFormElement>) => {
@@ -36,7 +25,6 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   return (
     <section className="grid">
       <div className="h-(--page--height) overflow-y-auto">
-        <p>{loaderData.userId}</p>
         <ul className="p-2 h-full">
           {messages.map((m) => <li className="text-gray-900 dark:text-gray-50" key={m.id}>{m.text}</li>)}
         </ul>

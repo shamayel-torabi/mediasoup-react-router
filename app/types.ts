@@ -8,11 +8,11 @@ export type Post = {
 
 
 export type User = {
-    id: number;
+    id: string;
     email: string,
     role: string,
-    firstName?: string,
-    lastName?: string,
+    firstName: string,
+    lastName: string,
     image?: string,
     createdAt: Date
 }

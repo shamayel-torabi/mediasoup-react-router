@@ -36,7 +36,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   }
 }
 
-export async function action({ request }: Route.ActionArgs) : Promise<ActionProps> {
+export async function action({ request }: Route.ActionArgs): Promise<ActionProps> {
   let response: Response;
   try {
     const formData = await request.formData();
