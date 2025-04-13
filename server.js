@@ -104,7 +104,6 @@ connections.on('connection', (socket) => {
 
   socket.on("joinRoom", async ({ userName, roomName }, ackCb) => {
     let newRoom = false;
-    client = new Client(userName, socket);
     let requestedRoom = rooms.find((room) => room.roomName === roomName);
 
     if (!requestedRoom) {
@@ -116,10 +115,13 @@ connections.on('connection', (socket) => {
       rooms.push(requestedRoom);
     }
 
+    client = new Client(userName, requestedRoom, socket);
+
+
     // add the room to the client
-    client.room = requestedRoom;
+    //client.room = requestedRoom;
     // add the client to the Room clients
-    client.room.addClient(client);
+    //client.room.addClient(client);
     // add this socket to the socket room
     socket.join(client.room.roomName);
 
