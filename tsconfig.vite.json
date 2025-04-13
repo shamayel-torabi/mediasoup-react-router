@@ -6,7 +6,7 @@
     "app/**/.server/**/*",
     "app/**/.client/**/*",
     "server/**/*"
-, "app/.server/prisma.ts", "lib/user.ts"  ],
+],
   "compilerOptions": {
     "composite": true,
     "strict": true,

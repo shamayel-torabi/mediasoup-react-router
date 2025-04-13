@@ -1,9 +1,9 @@
 import compression from "compression";
 import express from "express";
 import morgan from "morgan";
-import { createServer } from 'node:http';
-import { Server } from 'socket.io';
-import createWorkers from './lib/utilities/createWorkers.js';
+import { createServer } from "node:http";
+import { Server } from "socket.io";
+import createWorkers from "./lib/utilities/createWorkers.js";
 import Client from "./lib/classes/Client.js";
 import getWorker from "./lib/utilities/getWorker.js";
 import Room from "./lib/classes/Room.js";
@@ -73,33 +73,16 @@ const initMediaSoup = async () => {
 
 initMediaSoup(); //build our mediasoup server/sfu
 
-const connections = io.of('/mediasoup')
+const connections = io.of("/mediasoup");
 
-connections.on('connection', (socket) => {
-  console.log('Peer connected');
+connections.on("connection", (socket) => {
+  console.log("Peer connected");
   let client; //this client object available to all our socket listeners
 
   socket.emit("connectionSuccess", { socketId: socket.id });
 
   socket.on("disconnect", () => {
     console.log("Peer disconnected");
-  });
-  
-  socket.on("sendMessage", (message, roomName) => {
-    const m = { id: crypto.randomUUID().toString(), text: message };
-    const requestedRoom = rooms.find((room) => room.roomName === roomName);
-
-    if(requestedRoom){
-      requestedRoom.addMessage(m)
-      console.log(' requestedRoom.clients.length:', requestedRoom.clients.length)
-      // for(var c of requestedRoom.clients){
-      //   connections.to(c.socket.id).emit("newMessage", m); 
-      // }
-      connections.to(requestedRoom.roomName).emit("newMessage", m); 
-    }
-    else{
-      console.log(`room ${roomName} not found`)
-    }
   });
 
   socket.on("joinRoom", async ({ userName, roomName }, ackCb) => {
@@ -117,19 +100,25 @@ connections.on('connection', (socket) => {
 
     client = new Client(userName, requestedRoom, socket);
 
-
-    // add the room to the client
-    //client.room = requestedRoom;
-    // add the client to the Room clients
-    //client.room.addClient(client);
-    // add this socket to the socket room
     socket.join(client.room.roomName);
 
     ackCb({
       routerRtpCapabilities: client.room.router.rtpCapabilities,
       newRoom,
-      messages: client.room.messages
+      messages: client.room.messages,
     });
+  });
+
+  socket.on("sendMessage", (messageText, roomName) => {
+    const message = { id: crypto.randomUUID().toString(), text: messageText };
+    const requestedRoom = rooms.find((room) => room.roomName === roomName);
+
+    if (requestedRoom) {
+      requestedRoom.addMessage(message);
+      connections.to(requestedRoom.roomName).emit("newMessage", message);
+    } else {
+      console.log(`room ${roomName} not found`);
+    }
   });
 });
 
