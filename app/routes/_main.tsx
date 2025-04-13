@@ -2,10 +2,10 @@ import { Outlet, redirect } from "react-router";
 import Header from "~/components/Header";
 import type { Route } from "./+types/_main";
 import { getUserId } from "~/.server/session";
-import { getUserByEmail } from "~/.server/user";
 import type { User } from "~/types";
 import MediaProvider from "~/components/MediaProvider";
 import UserProvider from "~/components/UserProvider";
+import { getUserByEmail } from "lib/user";
 
 export async function loader({ request }: Route.LoaderArgs) {
   // Check if the user is already logged in
@@ -25,8 +25,12 @@ export async function loader({ request }: Route.LoaderArgs) {
         image: user.image,
         createdAt: user.createdAt,
       };
+
+      return { user: u };
     }
-    return { user: u };
+    else{
+      throw redirect("/login");
+    }
   }
 }
 

@@ -4,8 +4,8 @@ import { z, type ZodFormattedError } from "zod";
 import { Card } from "~/components/Card";
 import { Errors } from "~/components/Errors";
 import { createUserSession, getUserId } from "~/.server/session";
-import { getUserByEmail } from "~/.server/user";
 import bcrypt from "bcryptjs";
+import { getUserByEmail } from "lib/user";
 
 export function meta({ }: Route.MetaArgs) {
   return [

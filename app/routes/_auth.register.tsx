@@ -3,7 +3,7 @@ import { Card } from "~/components/Card";
 import { Form, Link, redirect } from "react-router";
 import { z, type ZodFormattedError } from "zod";
 import { Errors } from "~/components/Errors";
-import { createUser, getUserByEmail } from "~/.server/user";
+import { createUser, getUserByEmail } from "lib/user";
 
 const registerUserSchema = z.object({
     email: z.string({ required_error: "ریانامه باید وارد شود" })
