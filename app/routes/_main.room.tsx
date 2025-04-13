@@ -1,8 +1,10 @@
 import { useUserContext } from "~/components/UserProvider";
 import type { Route } from "./+types/_main.room.$roomName";
 
-export async function loader({ params }: Route.LoaderArgs) {
-  const roomName = params.roomName;
+export async function loader({ request }: Route.LoaderArgs) {
+  const searchParams = new URL(request.url).searchParams;
+
+  const roomName = searchParams.get("roomName");
   return { roomName }
 }
 
