@@ -22,7 +22,7 @@ export async function action({ request }: Route.ActionArgs) {
 export default function Home() {
   return (
     <section className="grid items-center justify-center h-(--page--height)">
-      <Card className="grid min-h-64 w-96">
+      <Card className="m-b-2 grid min-h-64 w-96">
         <p className="mb-5 text-2xl text-gray-900 dark:text-white">ورود به نشست</p>
         <Form method="post">
           <div className="mb-5">

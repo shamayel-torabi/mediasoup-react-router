@@ -86,10 +86,17 @@ connections.on('connection', (socket) => {
   });
   
   socket.on("sendMessage", (message, roomName) => {
-    const m = { id: crypto.randomUUID(), text: message };
-    let requestedRoom = rooms.find((room) => room.roomName === roomName);
-    requestedRoom.message.push(m)
-    socket.to(roomName).emit("newMessage", m);
+    const m = { id: crypto.randomUUID().toString(), text: message };
+    const requestedRoom = rooms.find((room) => room.roomName === roomName);
+
+    if(requestedRoom){
+      requestedRoom.addMessage(m)
+      console.log('requestedRoom.roomName:', requestedRoom.roomName)
+      io.to(requestedRoom.roomName).emit("newMessage", m); 
+    }
+    else{
+      console.log(`room ${roomName} not found`)
+    }
   });
 
   socket.on("joinRoom", async ({ userName, roomName }, ackCb) => {
@@ -115,7 +122,8 @@ connections.on('connection', (socket) => {
 
     ackCb({
       routerRtpCapabilities: client.room.router.rtpCapabilities,
-      newRoom
+      newRoom,
+      messages: client.room.messages
     });
   });
 });

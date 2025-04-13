@@ -1,6 +1,7 @@
+import { Card } from "./Card";
 import { useMediaContext } from "./MediaProvider";
 
-export default function Notification() {
+export default function Chat() {
     const { messages, sendMessage } = useMediaContext()
 
     const handleSubmit = async (e: React.FocusEvent<HTMLFormElement>) => {
@@ -15,12 +16,12 @@ export default function Notification() {
 
     return (
         <section className="grid">
-            <div className="h-(--page--height) overflow-y-auto">
+            <Card className="h-(--message--page--height) overflow-y-auto">
                 <ul className="p-2 h-full">
                     {messages.map((m) => <li className="text-gray-900 dark:text-gray-50" key={m.id}>{m.text}</li>)}
                 </ul>
-            </div>
-            <div className="px-1 py-2 h-(--message--pane)">
+            </Card>
+            <Card className="px-1 py-2 h-(--message--pane)">
                 <form onSubmit={handleSubmit}>
                     <div className="flex">
                         <input type="text" name="message" id="message" className="rounded-none rounded-s-lg bg-gray-50 border text-gray-900 focus:ring-blue-500 focus:border-blue-500 block flex-1 min-w-0 w-full text-sm border-gray-300 p-2.5  dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="پیام را وارد کنید" />
@@ -32,7 +33,7 @@ export default function Notification() {
                         </button>
                     </div>
                 </form>
-            </div>
+            </Card>
         </section>
     )
 }

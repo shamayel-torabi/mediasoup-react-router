@@ -6,6 +6,11 @@ export type Post = {
     body: string
 }
 
+export type Message = {
+    id: string
+    text: string
+}
+
 
 export type User = {
     id: string;
