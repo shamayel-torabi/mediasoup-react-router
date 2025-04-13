@@ -1,8 +1,8 @@
+import type { Route } from "./+types/_auth.register";
 import { Card } from "~/components/Card";
 import { Form, Link, redirect } from "react-router";
 import { z, type ZodFormattedError } from "zod";
 import { Errors } from "~/components/Errors";
-import type { Route } from "./+types/_auth.register";
 import { createUser, getUserByEmail } from "~/.server/user";
 
 const registerUserSchema = z.object({

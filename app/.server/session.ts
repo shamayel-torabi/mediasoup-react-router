@@ -1,12 +1,6 @@
-// app/services/session.server.ts
-
 import { createCookieSessionStorage, redirect } from "react-router";
 import type { User } from "~/types";
 
-/**
- * Creates a cookie-based session storage.
- * @see https://reactrouter.com/en/dev/utils/create-cookie-session-storage
- */
 export const sessionStorage = createCookieSessionStorage({
   cookie: {
     name: "__session",
@@ -20,22 +14,12 @@ export const sessionStorage = createCookieSessionStorage({
 
 export const { commitSession, destroySession } = sessionStorage;
 
-/**
- * Retrieves the user session from the request.
- * @param {Request} request - The incoming request.
- * @returns {Promise<Session>} The user session.
- */
 const getUserSession = async (request: Request) => {
   return await sessionStorage.getSession(request.headers.get("Cookie"));
 };
 
-/**
- * Logs out the user by destroying their session.
- * @param {Request} request - The incoming request.
- * @returns {Promise<Response>} Redirect response after logout.
- */
 export async function logout(request: Request) {
-  console.log("logout");
+  //console.log("logout");
   const session = await getUserSession(request);
   return redirect("/", {
     headers: {
@@ -46,28 +30,14 @@ export async function logout(request: Request) {
 
 const USER_SESSION_KEY = "userId";
 
-/**
- * Retrieves the user ID from the session.
- * @param {Request} request - The incoming request.
- * @returns {Promise<string | undefined>} The user ID if found, undefined otherwise.
- */
 export async function getUserId(
   request: Request
 ): Promise<User["id"] | undefined> {
   const session = await getUserSession(request);
-  const userId = session.get(USER_SESSION_KEY);
+  const userId = session.get(USER_SESSION_KEY) as string;
   return userId;
 }
 
-/**
- * Creates a new user session.
- * @param {Object} params - The parameters for creating the session.
- * @param {Request} params.request - The incoming request.
- * @param {string} params.userId - The user ID to store in the session.
- * @param {boolean} params.remember - Whether to create a persistent session.
- * @param {string} [params.redirectUrl] - The URL to redirect to after creating the session.
- * @returns {Promise<Response>} Redirect response with the new session cookie.
- */
 export async function createUserSession({
   request,
   userId,

@@ -1,6 +1,6 @@
 import type { User } from "~/types";
 import { prisma } from "./prisma";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 
 const saltRounds = 10;
 

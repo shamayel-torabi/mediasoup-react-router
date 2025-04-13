@@ -10,7 +10,6 @@ import {
 
 import type { Route } from "./+types/root";
 import "./app.css";
-import MediaProvider from "./components/MediaProvider";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -46,9 +45,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 export default function Root() {
   return (
     <div className="flex flex-col h-screen overflow-y-auto">
-        <MediaProvider>
-          <Outlet />
-        </MediaProvider>
+      <Outlet />
     </div>
   );
 }

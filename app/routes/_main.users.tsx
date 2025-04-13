@@ -37,7 +37,7 @@ export async function action({ request }: Route.ClientActionArgs) {
   const id = formData.get("id") as string;
 
   try {
-    const user = await deleteUser(id);
+    const userId = await deleteUser(id);
   } catch (error) {
     console.error(error);
     return { error: error }

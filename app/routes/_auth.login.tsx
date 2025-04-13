@@ -1,11 +1,11 @@
+import type { Route } from "./+types/_auth.login";
 import { Form, Link, redirect } from "react-router";
 import { z, type ZodFormattedError } from "zod";
 import { Card } from "~/components/Card";
 import { Errors } from "~/components/Errors";
-import type { Route } from "./+types/_auth.login";
 import { createUserSession, getUserId } from "~/.server/session";
 import { getUserByEmail } from "~/.server/user";
-import bcrypt from 'bcrypt';
+import bcrypt from "bcryptjs";
 
 export function meta({ }: Route.MetaArgs) {
   return [
@@ -65,7 +65,7 @@ export async function action({ request }: Route.ActionArgs): Promise<ActionProps
     // Create a session
     response = await createUserSession({
       request,
-      userId: user.id,
+      userId: user.email,
       remember: true,
     });
 
@@ -101,7 +101,7 @@ export default function Login({ actionData }: Route.ComponentProps) {
               <div className="mb-5">
                 <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">رایانامه</label>
                 <input
-                  type="email" 
+                  type="email"
                   id="email"
                   name="email"
                   dir="ltr"
@@ -120,9 +120,9 @@ export default function Login({ actionData }: Route.ComponentProps) {
                 />
                 <Errors errors={actionData?.errors?.password?._errors} />
               </div>
-            </div>
-            <div>
-              <Errors errors={actionData?.errors?.customError?._errors} />
+              <div>
+                <Errors errors={actionData?.errors?.customError?._errors} />
+              </div>
             </div>
             <div className='flex justify-end'>
               <button type="submit" className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm w-full sm:w-auto px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">ارسال</button>
@@ -137,7 +137,7 @@ export default function Login({ actionData }: Route.ComponentProps) {
               </g>
             </svg>
             <p className="my-8 text-gray-900 dark:text-white">
-               اگر تاکنون در این وبگاه حساب کاربری نداشته اید با اشاره به دکمه ثبت نام می توانید عضو این وبگاه شده و از امکانات آن بهره مند شوید
+              اگر تاکنون در این وبگاه حساب کاربری نداشته اید با اشاره به دکمه ثبت نام می توانید عضو این وبگاه شده و از امکانات آن بهره مند شوید
             </p>
           </div>
           <div className='flex justify-end'>

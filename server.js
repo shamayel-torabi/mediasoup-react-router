@@ -52,7 +52,7 @@ const messages = [];
 const connections = io.of('/mediasoup')
 
 connections.on('connection', (socket) => {
-  console.log('a user connected');
+  console.log('Peer connected');
 
   socket.emit("connection-success", { socketId: socket.id, messages });
 
