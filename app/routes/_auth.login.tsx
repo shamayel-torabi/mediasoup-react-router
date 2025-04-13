@@ -101,8 +101,10 @@ export default function Login({ actionData }: Route.ComponentProps) {
               <div className="mb-5">
                 <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">رایانامه</label>
                 <input
-                  type="email" id="email"
+                  type="email" 
+                  id="email"
                   name="email"
+                  dir="ltr"
                   className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                   placeholder="name@flowbite.com" />
                 <Errors errors={actionData?.errors?.email?._errors} />
@@ -113,6 +115,7 @@ export default function Login({ actionData }: Route.ComponentProps) {
                   type="password"
                   id="password"
                   name="password"
+                  dir="ltr"
                   className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                 />
                 <Errors errors={actionData?.errors?.password?._errors} />
@@ -134,7 +137,7 @@ export default function Login({ actionData }: Route.ComponentProps) {
               </g>
             </svg>
             <p className="my-8 text-gray-900 dark:text-white">
-              اگر تاکنون به این وبگاه وارد نشده اید با کلیک دکمه ثبت نام در این وبگاه ثبت نام و وارد شوید
+               اگر تاکنون در این وبگاه حساب کاربری نداشته اید با اشاره به دکمه ثبت نام می توانید عضو این وبگاه شده و از امکانات آن بهره مند شوید
             </p>
           </div>
           <div className='flex justify-end'>

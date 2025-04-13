@@ -8,30 +8,30 @@ export const getUsers = async () => {
   let users: User[] = [];
   try {
     const usrs = await prisma.user.findMany();
-    users =  usrs.map((user) => {
-      let u: User = {
+    users = usrs.map((user) => {
+      return {
         id: user.id,
         email: user.email,
         role: user.role,
-        firstName: user.firstName ,
-        lastName: user.lastName ,
-        image: user.image || undefined,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        image: user.image,
         createdAt: user.createdAt,
-      };
-      return u
+      } satisfies User;
     });
   } catch (error) {
     console.log(error);
-    users = []
+    users = [];
   }
-  
+
   return users;
 };
 
 export const getUserByEmail = async (email: string) => {
   try {
-    const user = await prisma.user.findUnique({ where: { email } }) as User & {password: string};
-    return user;
+    return (await prisma.user.findUnique({ where: { email } })) as User & {
+      password: string;
+    };
   } catch (error) {
     console.log(error);
     return null;
@@ -58,7 +58,17 @@ export const createUser = async (
         lastName,
       },
     });
-    return user;
+    const u: User = {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      image: user.image,
+      createdAt: user.createdAt,
+    };
+
+    return u;
   } catch (error) {
     console.log(error);
     return null;
@@ -68,7 +78,8 @@ export const createUser = async (
 export const deleteUser = async (id: string) => {
   try {
     const user = await prisma.user.delete({ where: { id } });
-    return user;
+    const u: { id: string } = { id: user.id };
+    return u;
   } catch (error) {
     console.log(error);
     return null;

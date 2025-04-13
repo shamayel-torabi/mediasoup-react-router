@@ -1,9 +1,7 @@
 // app/services/session.server.ts
 
 import { createCookieSessionStorage, redirect } from "react-router";
-
-/** Represents a user in the system */
-type User = { id: string; username: string; password: string };
+import type { User } from "~/types";
 
 /**
  * Creates a cookie-based session storage.

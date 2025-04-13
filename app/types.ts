@@ -9,11 +9,11 @@ export type Post = {
 
 export type User = {
     id: string;
-    email: string,
-    role: string,
-    firstName: string,
-    lastName: string,
-    image?: string,
-    createdAt: Date
+    email: string;
+    role: string;
+    firstName: string;
+    lastName: string;
+    image: string | null;
+    createdAt: Date;
 }
 
