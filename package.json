@@ -5,13 +5,12 @@
   "scripts": {
     "prebuild": "prisma generate",
     "build": "react-router build",
-    "postbuild": "prisma db push",
     "dev": "cross-env NODE_ENV=development node server.js",
     "start": "node server.js",
     "typecheck": "react-router typegen && tsc -b"
   },
   "prisma": {
-    "seed": "tsx ./lib/seed.ts"
+    "seed": "tsx ./prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.6.0",
@@ -29,7 +28,6 @@
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
     "tailwind-merge": "^3.2.0",
-    "tsx": "^4.19.3",
     "zod": "^3.24.2"
   },
   "devDependencies": {
@@ -45,6 +43,7 @@
     "cross-env": "^7.0.3",
     "prisma": "^6.6.0",
     "tailwindcss": "^4.0.0",
+    "tsx": "^4.19.3",
     "typescript": "^5.7.2",
     "vite": "^5.4.11",
     "vite-tsconfig-paths": "^5.1.4"

@@ -2,7 +2,7 @@ import { Form } from "react-router";
 import type { User } from "~/types";
 import { Spinner } from "~/components/Spinner";
 import type { Route } from "./+types/_main.users";
-import { deleteUser, getUsers } from "lib/user";
+import { getUsers } from "~/.server/user";
 
 export function meta({ }: Route.MetaArgs) {
   return [

@@ -5,7 +5,7 @@ import { Card } from "~/components/Card";
 import { Errors } from "~/components/Errors";
 import { createUserSession, getUserId } from "~/.server/session";
 import bcrypt from "bcryptjs";
-import { getUserByEmail } from "lib/user";
+import { getUserByEmail } from "~/.server/user";
 
 export function meta({ }: Route.MetaArgs) {
   return [

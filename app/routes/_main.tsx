@@ -5,7 +5,7 @@ import { getUserId } from "~/.server/session";
 import type { User } from "~/types";
 import MediaProvider from "~/components/MediaProvider";
 import UserProvider from "~/components/UserProvider";
-import { getUserByEmail } from "lib/user";
+import { getUserByEmail } from "~/.server/user";
 
 export async function loader({ request }: Route.LoaderArgs) {
   // Check if the user is already logged in
