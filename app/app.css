@@ -6,7 +6,8 @@
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   --header-height: 4rem;
   --message--pane: 4rem;
-  --page--height: calc(100vh - var(--header-height) - var(--message--pane) );
+  --message--page--height: calc(    100vh - var(--header-height) - var(--message--pane));
+  --page--height: calc(100vh - var(--header-height));
 }
 
 html,
@@ -18,7 +19,6 @@ body {
   }
 }
 
-
 a.active {
-  @apply text-blue-500 dark:text-blue-50
+  @apply text-blue-500 dark:text-blue-50;
 }

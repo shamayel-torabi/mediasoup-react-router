@@ -3,6 +3,10 @@ import express from "express";
 import morgan from "morgan";
 import { createServer } from 'node:http';
 import { Server } from 'socket.io';
+import createWorkers from './lib/utilities/createWorkers.js';
+import Client from "./lib/classes/Client.js";
+import getWorker from "./lib/utilities/getWorker.js";
+import Room from "./lib/classes/Room.js";
 
 // Short-circuit the type-checking of the built output.
 const BUILD_PATH = "./build/server/index.js";
@@ -47,23 +51,72 @@ app.use(morgan("tiny"));
 
 const httpServer = createServer(app);
 const io = new Server(httpServer);
-const messages = [];
+
+//our globals
+//init workers, it's where our mediasoup workers will live
+/**
+ * @type {null}
+ */
+let workers = null;
+// router is now managed by the Room object
+// master rooms array that contains all our Room object
+/**
+ * @type {any[]}
+ */
+const rooms = [];
+
+//initMediaSoup gets mediasoup ready to do its thing
+const initMediaSoup = async () => {
+  workers = await createWorkers();
+  // console.log(workers)
+};
+
+initMediaSoup(); //build our mediasoup server/sfu
 
 const connections = io.of('/mediasoup')
 
 connections.on('connection', (socket) => {
   console.log('Peer connected');
+  let client; //this client object available to all our socket listeners
 
-  socket.emit("connection-success", { socketId: socket.id, messages });
+  socket.emit("connectionSuccess", { socketId: socket.id });
 
   socket.on("disconnect", () => {
     console.log("Peer disconnected");
   });
   
-  socket.on("sendMessage", (message) => {
+  socket.on("sendMessage", (message, roomName) => {
     const m = { id: crypto.randomUUID(), text: message };
-    messages.push(m);
-    connections.emit("newMessage", m);
+    let requestedRoom = rooms.find((room) => room.roomName === roomName);
+    requestedRoom.message.push(m)
+    socket.to(roomName).emit("newMessage", m);
+  });
+
+  socket.on("joinRoom", async ({ userName, roomName }, ackCb) => {
+    let newRoom = false;
+    client = new Client(userName, socket);
+    let requestedRoom = rooms.find((room) => room.roomName === roomName);
+
+    if (!requestedRoom) {
+      newRoom = true;
+      // make the new room, add a worker, add a router
+      const workerToUse = await getWorker(workers);
+      requestedRoom = new Room(roomName, workerToUse);
+      await requestedRoom.createRouter(io);
+      rooms.push(requestedRoom);
+    }
+
+    // add the room to the client
+    client.room = requestedRoom;
+    // add the client to the Room clients
+    client.room.addClient(client);
+    // add this socket to the socket room
+    socket.join(client.room.roomName);
+
+    ackCb({
+      routerRtpCapabilities: client.room.router.rtpCapabilities,
+      newRoom
+    });
   });
 });
 

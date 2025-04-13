@@ -18,7 +18,7 @@ type MediaContextType = {
 
 
 interface ServerToClientEvents {
-    "connection-success": (data: { socketId: string, messages: Message[] }) => void,
+    "connectionSuccess": (data: { socketId: string }) => void,
     "newMessage" : (message: { id: string, text: string}) => void;
 }
 
@@ -36,9 +36,8 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
         const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io("/mediasoup");
 
         setSocket(socket);
-        socket.on("connection-success", (data) => {
+        socket.on("connectionSuccess", (data) => {
             console.log(`socket connection Id: ${data.socketId}`)
-            setMessages(data.messages);
         });
         socket.on("newMessage", (message) =>{
             setMessages(prev => [...prev, message])
