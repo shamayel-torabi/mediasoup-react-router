@@ -91,8 +91,11 @@ connections.on('connection', (socket) => {
 
     if(requestedRoom){
       requestedRoom.addMessage(m)
-      console.log('requestedRoom.roomName:', requestedRoom.roomName)
-      io.to(requestedRoom.roomName).emit("newMessage", m); 
+      console.log(' requestedRoom.clients.length:', requestedRoom.clients.length)
+      // for(var c of requestedRoom.clients){
+      //   connections.to(c.socket.id).emit("newMessage", m); 
+      // }
+      connections.to(requestedRoom.roomName).emit("newMessage", m); 
     }
     else{
       console.log(`room ${roomName} not found`)

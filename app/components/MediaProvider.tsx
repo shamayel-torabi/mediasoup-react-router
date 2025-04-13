@@ -46,7 +46,6 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
             console.log(`socket connection Id: ${data.socketId}`)
         });
         socket.on("newMessage", (message) => {
-            console.log('newMessage:', message)
             setMessages(prev => [...prev, message])
         })
         return () => { socket.disconnect(); };
