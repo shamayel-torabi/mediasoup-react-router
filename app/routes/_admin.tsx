@@ -15,7 +15,11 @@ export async function loader({ request }: Route.LoaderArgs) {
   } else {
     const user = await getUserByEmail(userId);
     let u: User | undefined = undefined;
-    if (user) {
+    if (user ) {
+      if(user.role !== "admin"){
+        throw redirect("/forbiden")
+      }
+
       u = {
         id: user.id,
         email: user.email,
@@ -34,7 +38,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   }
 }
 
-export default function MainLayout({ loaderData }: Route.ComponentProps) {
+export default function AdminLayout({ loaderData }: Route.ComponentProps) {
   const { user } = loaderData;
   return (
     <UserProvider user={user}>

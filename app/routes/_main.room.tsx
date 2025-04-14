@@ -1,9 +1,9 @@
-import type { Route } from "./+types/_main.room";
 import Chat from "~/components/Chat";
+import type { Route } from "./+types/_main.room";
 import { useState } from "react";
-import { Button } from "~/components/Button";
 import { useMediaContext } from "~/components/MediaProvider";
-import { Card } from "~/components/Card";
+import { Button } from "~/components/ui/button";
+import { Card, CardContent } from "~/components/ui/card";
 
 export async function loader({ request }: Route.LoaderArgs) {
   const searchParams = new URL(request.url).searchParams;
@@ -30,16 +30,18 @@ export default function Room({ loaderData }: Route.ComponentProps) {
 
     return (
       <div className="grid items-center justify-center h-(--page--height)">
-        <Button onClick={handleJoin}>پیوستن به نشست</Button>
+        <Button variant="outline" onClick={handleJoin}>پیوستن به نشست</Button>
       </div>)
   }
 
   return (
-    <div className="grid grid-cols-[240px_minmax(900px,_1fr)] gap-1">
-      <Chat />
-      <Card>
-        <h1 className="text-gray-900 dark:text-gray-50">Test</h1>
+    <div className="flex">
+      <Card className="flex-1 my-2 ms-2">
+        <CardContent>
+          <h1 className="text-gray-900 dark:text-gray-50">Test</h1>
+        </CardContent>
       </Card>
+      <Chat />
     </div>
   )
 }

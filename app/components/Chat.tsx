@@ -1,8 +1,31 @@
-import { Card } from "./Card";
+import type { Message } from "~/types";
 import { useMediaContext } from "./MediaProvider";
+import { Card, CardContent } from "./ui/card";
+import { Input } from "./ui/input";
+
+const ChatMessage = ({ message }: { message: Message }) => {
+    const fa = new Intl.DateTimeFormat("fa-IR", { hour: "numeric", minute: "numeric" })
+    const date = new Date(message.date);
+    const timeStr = fa.format(date);
+
+    return (
+        <li>
+            <div className="flex items-start gap-2.5 mb-1">
+                <img className="w-8 h-8 rounded-full" src="/images/people/profile-picture-3.jpg" alt="Jese image" />
+                <div className="flex flex-col w-full max-w-[220px] leading-1.5 p-4 border-gray-200 bg-gray-100 rounded-e-xl rounded-es-xl dark:bg-gray-700">
+                    <div className="flex items-center justify-between space-x-2 rtl:space-x-reverse">
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white">{message.userName}</span>
+                        <span className="text-sm font-normal text-gray-500 dark:text-gray-400">{timeStr}</span>
+                    </div>
+                    <p className="text-sm font-normal py-2.5 text-gray-900 dark:text-white">{message.text}</p>
+                </div>
+            </div>
+        </li>
+    )
+}
 
 export default function Chat() {
-    const { messages, sendMessage } = useMediaContext()
+    const { messages, sendMessage } = useMediaContext();
 
     const handleSubmit = async (e: React.FocusEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -15,17 +38,21 @@ export default function Chat() {
     }
 
     return (
-        <section className="grid">
-            <Card className="h-(--message--page--height) overflow-y-auto">
-                <ul className="p-2 h-full">
-                    {messages.map((m) => <li className="text-gray-900 dark:text-gray-50" key={m.id}>{m.text}</li>)}
-                </ul>
+        <section className="grid h-full m-2">
+            <Card className="h-(--message--page--height) overflow-y-auto mb-1">
+                <CardContent className="p-1">
+                    <ul className="p-2 h-full">
+                        {messages.map((m) => <ChatMessage message={m} key={m.id} />)}
+                    </ul>
+                </CardContent>
             </Card>
-            <Card className="px-1 py-2 h-(--message--pane)">
+            <div className="h-(--message--pane)">
                 <form onSubmit={handleSubmit}>
                     <div className="flex">
-                        <input type="text" name="message" id="message" className="rounded-none rounded-s-lg bg-gray-50 border text-gray-900 focus:ring-blue-500 focus:border-blue-500 block flex-1 min-w-0 w-full text-sm border-gray-300 p-2.5  dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="پیام را وارد کنید" />
-                        <button type="submit" className="inline-flex items-center cursor-pointer px-3 text-sm text-gray-900 bg-gray-200 border rounded-e-lg border-gray-300 border-s-0 dark:bg-gray-600 dark:text-gray-400 dark:border-gray-600">
+                        <Input type="text" name="message" id="message"
+                         className="rounded-none rounded-s-sm" 
+                         placeholder="پیام را وارد کنید" />
+                        <button type="submit" className="inline-flex items-center cursor-pointer px-3 text-sm text-gray-900 bg-gray-200 border rounded-e-sm border-gray-300 border-s-0 dark:bg-gray-600 dark:text-gray-400 dark:border-gray-600">
                             <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 rtl:rotate-180 text-gray-500 hover:text-gray-50 dark:text-gray-400" fill="currentColor">
                                 <path d="m27.45 15.11-22-11a1 1 0 0 0 -1.08.12 1 1 0 0 0 -.33 1l2.96 10.77-3 10.74a1 1 0 0 0 1 1.26 1 1 0 0 0 .45-.11l22-11a1 1 0 0 0 0-1.78zm-20.9 10 2.21-8.11h9.24v-2h-9.24l-2.21-8.11 18.21 9.11z" />
                                 <path d="m0 0h32v32h-32z" fill="none" />
@@ -33,7 +60,7 @@ export default function Chat() {
                         </button>
                     </div>
                 </form>
-            </Card>
+            </div>
         </section>
     )
 }

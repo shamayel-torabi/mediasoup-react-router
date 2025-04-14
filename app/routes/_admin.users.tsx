@@ -1,8 +1,8 @@
 import { Form } from "react-router";
 import type { User } from "~/types";
 import { Spinner } from "~/components/Spinner";
-import type { Route } from "./+types/_main.users";
-import { getUsers } from "~/.server/user";
+import { deleteUser, getUsers } from "~/.server/user";
+import type { Route } from "./+types/_admin.users";
 
 export function meta({ }: Route.MetaArgs) {
   return [

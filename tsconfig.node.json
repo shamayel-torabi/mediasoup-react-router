@@ -1,7 +1,7 @@
 {
   "extends": "./tsconfig.json",
   "include": [
-    "lib/**/*",
+    "mediasoup/**/*",
     "server.js",
     "tailwind.config.ts",
     "vite.config.ts"

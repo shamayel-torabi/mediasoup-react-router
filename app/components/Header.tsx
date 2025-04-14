@@ -28,6 +28,14 @@ const AuthStatus = ({ user }: { user: User | undefined }) => {
     }
 }
 
+const AdminMenu = ({ user, onClick }: { user: User | undefined, onClick: () => void }) => {
+    if (user?.role === 'admin') {
+        return (
+            <MenuItem url="/users" title="کاربران" onClick={() => onClick} />
+        )
+    }
+}
+
 export default function Header() {
     const { user } = useUserContext()
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -52,7 +60,7 @@ export default function Header() {
                         <div className="flex flex-col items-center md:flex-row gap-2">
                             <ul className="font-medium w-full flex flex-col p-2 md:p-0 mt-4 border border-gray-100 rounded-lg md:flex-row md:space-x-4 md:mt-0 md:border-0 bg-gray-100 md:bg-gray-200 dark:bg-gray-600  md:dark:bg-gray-800 dark:border-gray-700">
                                 <MenuItem url="/" title="خانه" onClick={() => setMobileMenuOpen(false)} />
-                                <MenuItem url="/users" title="کاربران" onClick={() => setMobileMenuOpen(false)} />
+                                <AdminMenu user={user} onClick={() => {setMobileMenuOpen(false)}} />
                                 <AuthStatus user={user} />
                             </ul>
                         </div>

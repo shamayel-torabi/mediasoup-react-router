@@ -12,7 +12,7 @@ import { useUserContext } from './UserProvider';
 
 type MediaContextType = {
     messages: Message[],
-    sendMessage: (message: string) => Promise<void>,
+    sendMessage: (text: string) => Promise<void>,
     joinRoom: (roomName: string) => Promise<void>
 }
 
@@ -23,7 +23,7 @@ interface ServerToClientEvents {
 }
 
 interface ClientToServerEvents {
-    sendMessage: (message: string, roomName: string) => void,
+    sendMessage: ({ text, userName, roomName }: { text: string, userName: string, roomName: string }) => void,
     joinRoom: (
         data: { userName: string, roomName: string },
         ackCb: ({ routerRtpCapabilities, newRoom, messages }: { routerRtpCapabilities: mds.RtpCapabilities, newRoom: boolean, messages: Message[] }) => void
@@ -46,21 +46,25 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
             console.log(`socket connection Id: ${data.socketId}`)
         });
         socket.on("newMessage", (message) => {
+            //console.log('recieve message:', message)
             setMessages(prev => [...prev, message])
         })
         return () => { socket.disconnect(); };
     }, []);
 
-    const sendMessage = async (message: string) => {
-        if (room)
-            socket?.emit('sendMessage', message, room);
+    const sendMessage = async (text: string) => {
+        if (room) {
+            const userName = `${user?.firstName} ${user?.lastName}`;
+            const roomName = room;
+            socket?.emit('sendMessage', { text, userName, roomName });
+        }
     }
 
     const joinRoom = async (roomName: string) => {
         const joinRoomResp = await socket?.emitWithAck("joinRoom", { userName: user?.email!, roomName });
-        if(joinRoomResp){
+        if (joinRoomResp) {
             setRoom(roomName)
-            setMessages(joinRoomResp.messages)   
+            setMessages(joinRoomResp.messages)
         }
     }
 

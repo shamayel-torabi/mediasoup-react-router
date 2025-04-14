@@ -1,14 +1,9 @@
 
-export type Post = {
-    id: number
-    userId: number
-    title: string
-    body: string
-}
-
 export type Message = {
     id: string
     text: string
+    userName: string,
+    date: string
 }
 
 

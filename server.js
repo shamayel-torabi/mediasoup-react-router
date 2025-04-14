@@ -3,10 +3,10 @@ import express from "express";
 import morgan from "morgan";
 import { createServer } from "node:http";
 import { Server } from "socket.io";
-import createWorkers from "./lib/utilities/createWorkers.js";
-import Client from "./lib/classes/Client.js";
-import getWorker from "./lib/utilities/getWorker.js";
-import Room from "./lib/classes/Room.js";
+import createWorkers from "./mediasoup/utilities/createWorkers.js";
+import Client from "./mediasoup/classes/Client.js";
+import getWorker from "./mediasoup/utilities/getWorker.js";
+import Room from "./mediasoup/classes/Room.js";
 
 // Short-circuit the type-checking of the built output.
 const BUILD_PATH = "./build/server/index.js";
@@ -109,8 +109,13 @@ connections.on("connection", (socket) => {
     });
   });
 
-  socket.on("sendMessage", (messageText, roomName) => {
-    const message = { id: crypto.randomUUID().toString(), text: messageText };
+  socket.on("sendMessage", ({ text, userName, roomName }) => {
+    const message = {
+      id: crypto.randomUUID().toString(),
+      text,
+      userName,
+      date: new Date().toISOString(),
+    };
     const requestedRoom = rooms.find((room) => room.roomName === roomName);
 
     if (requestedRoom) {
