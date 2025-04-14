@@ -1,28 +1,29 @@
 import Chat from "~/components/Chat";
-import type { Route } from "./+types/_main.room";
 import { useState } from "react";
 import { useMediaContext } from "~/components/MediaProvider";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
+import type { Route } from "./+types/_main.room$roomId";
 
-export async function loader({ request }: Route.LoaderArgs) {
-  const searchParams = new URL(request.url).searchParams;
-  const roomName = searchParams.get("roomName");
-  return { roomName }
+export async function loader({ params }: Route.LoaderArgs) {
+  //const searchParams = new URL(request.url).searchParams;
+  const roomId = params.roomId;
+  console.log('roomId:', roomId)
+  return { roomId }
 }
 
 export default function Room({ loaderData }: Route.ComponentProps) {
-  const { roomName } = loaderData;
+  const { roomId } = loaderData;
   const { joinRoom } = useMediaContext()
 
   const [join, setJoin] = useState(false);
 
-  if (!roomName) {
+  if (!roomId) {
     throw new Error("نام نشست باید وجود داشته باشد")
   }
 
   const handleJoin = async () => {
-    await joinRoom(roomName);
+    await joinRoom(roomId);
     setJoin(true);
   }
 

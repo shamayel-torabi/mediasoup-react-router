@@ -9,11 +9,13 @@ import { io, Socket } from 'socket.io-client';
 import mds from 'mediasoup-client/types';
 import type { Message } from '~/types';
 import { useUserContext } from './UserProvider';
+import { toast } from "sonner"
 
 type MediaContextType = {
     messages: Message[],
     sendMessage: (text: string) => Promise<void>,
-    joinRoom: (roomName: string) => Promise<void>
+    createRoom: (roomName: string) => Promise<string | undefined>
+    joinRoom: (roomId: string) => Promise<void>
 }
 
 
@@ -23,14 +25,14 @@ interface ServerToClientEvents {
 }
 
 interface ClientToServerEvents {
-    sendMessage: ({ text, userName, roomName }: { text: string, userName: string, roomName: string }) => void,
+    sendMessage: ({ text, userName, roomId }: { text: string, userName: string, roomId: string }) => void,
     createRoom: (
         { roomName }: { roomName: string },
         ackCb: ({ roomId }: { roomId: string }) => void
     ) => void,
     joinRoom: (
-        data: { userName: string, roomName: string },
-        ackCb: ({ routerRtpCapabilities, newRoom, messages }: { routerRtpCapabilities: mds.RtpCapabilities, newRoom: boolean, messages: Message[] }) => void
+        data: { userName: string, roomId: string },
+        ackCb: ({ routerRtpCapabilities, messages, error }: { routerRtpCapabilities: mds.RtpCapabilities, messages: Message[], error?: string }) => void
     ) => void
 }
 
@@ -39,7 +41,7 @@ const MediaContext = createContext<MediaContextType>({} as MediaContextType)
 export default function MediaProvider({ children }: Readonly<{ children: React.ReactNode }>) {
     const [socket, setSocket] = useState<Socket<ServerToClientEvents, ClientToServerEvents>>();
     const [messages, setMessages] = useState<Message[]>([]);
-    const [room, setRoom] = useState<string>('')
+    const [roomId, setRoomId] = useState<string>('')
     const { user } = useUserContext();
 
     useEffect(() => {
@@ -57,24 +59,38 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
     }, []);
 
     const sendMessage = async (text: string) => {
-        if (room) {
+        if (roomId) {
             const userName = `${user?.firstName} ${user?.lastName}`;
-            const roomName = room;
-            socket?.emit('sendMessage', { text, userName, roomName });
+            socket?.emit('sendMessage', { text, userName, roomId });
         }
     }
 
-    const joinRoom = async (roomName: string) => {
-        const joinRoomResp = await socket?.emitWithAck("joinRoom", { userName: user?.email!, roomName });
-        if (joinRoomResp) {
-            setRoom(roomName)
+    const createRoom = async (roomName: string) => {
+        const createRoomResp = await socket?.emitWithAck("createRoom", { roomName });
+        if (createRoomResp?.roomId) {
+            return createRoomResp?.roomId;
+        }
+    }
+    const joinRoom = async (room: string) => {
+        const joinRoomResp = await socket?.emitWithAck("joinRoom", { userName: user?.email!, roomId: room });
+        
+        if(joinRoomResp?.error){
+            console.log(joinRoomResp?.error)
+            toast(joinRoomResp?.error)
+            return
+        }
+        
+        if (joinRoomResp?.messages) {
             setMessages(joinRoomResp.messages)
         }
+
+        setRoomId(room);
     }
 
     const contextValue: MediaContextType = {
         messages,
         sendMessage,
+        createRoom,
         joinRoom
     }
     return (

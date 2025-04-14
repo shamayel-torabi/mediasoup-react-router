@@ -125,7 +125,7 @@ connections.on("connection", (socket) => {
 
     if (requestedRoom) {
       requestedRoom.addMessage(message);
-      connections.to(requestedRoom.roomName).emit("newMessage", message);
+      connections.to(requestedRoom.id).emit("newMessage", message);
     } else {
       console.log(`room with Id:${roomId} not found`);
     }
