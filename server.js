@@ -7,11 +7,13 @@ import createWorkers from "./mediasoup/utilities/createWorkers.js";
 import Client from "./mediasoup/classes/Client.js";
 import getWorker from "./mediasoup/utilities/getWorker.js";
 import Room from "./mediasoup/classes/Room.js";
+import {v5 as uuidv5} from 'uuid';
 
 // Short-circuit the type-checking of the built output.
 const BUILD_PATH = "./build/server/index.js";
 const DEVELOPMENT = process.env.NODE_ENV === "development";
 const PORT = Number.parseInt(process.env.PORT || "3000");
+const UUIDV5_NAMESPACE = 'af6f650e-3ced-4f80-afef-f956afe3191d';
 
 const app = express();
 
@@ -86,16 +88,21 @@ connections.on("connection", (socket) => {
   });
 
   socket.on("createRoom", async ({ roomName }, ackCb) => {
-    const workerToUse = await getWorker(workers);
-    const requestedRoom = new Room(roomName, workerToUse);
-    await requestedRoom.createRouter(io);
-    rooms.push(requestedRoom);
+    const id = uuidv5(roomName, UUIDV5_NAMESPACE);
+    let requestedRoom = rooms.find((room) => room.id === id);
+
+    if (!requestedRoom) {
+      const workerToUse = await getWorker(workers);
+      requestedRoom = new Room(id, roomName, workerToUse);
+      await requestedRoom.createRouter(io);
+      rooms.push(requestedRoom);
+    }
 
     socket.join(requestedRoom.id);
 
     ackCb({
       roomId: requestedRoom.id,
-    });
+    });   
   });
 
   socket.on("joinRoom", async ({ userName, roomId }, ackCb) => {
@@ -115,15 +122,16 @@ connections.on("connection", (socket) => {
   });
 
   socket.on("sendMessage", ({ text, userName, roomId }) => {
-    const message = {
-      id: crypto.randomUUID().toString(),
-      text,
-      userName,
-      date: new Date().toISOString(),
-    };
     const requestedRoom = rooms.find((room) => room.id === roomId);
 
     if (requestedRoom) {
+      const message = {
+        id: crypto.randomUUID().toString(),
+        text,
+        userName,
+        date: new Date().toISOString(),
+      };
+
       requestedRoom.addMessage(message);
       connections.to(requestedRoom.id).emit("newMessage", message);
     } else {

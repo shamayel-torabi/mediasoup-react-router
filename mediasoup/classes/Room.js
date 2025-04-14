@@ -1,4 +1,6 @@
 import config from "../config.js";
+
+
 //import newDominantSpeaker from "../utilities/newDominantSpeaker.js";
 
 // Rooms are not a MediaSoup thing. MS cares about mediastreams, transports,
@@ -6,8 +8,8 @@ import config from "../config.js";
 // Rooms can be inside of clients, clients inside of rooms,
 // transports can belong to rooms or clients, etc.
 class Room {
-  constructor(roomName, workerToUse) {
-    this.id = crypto.randomUUID().toString();
+  constructor(id, roomName, workerToUse) {
+    this.id = id;
     this.roomName = roomName;
     this.worker = workerToUse;
     this.router = null;
