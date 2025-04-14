@@ -29,6 +29,8 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export default function Home() {
+
+  
   return (
     <section className="grid items-center justify-center h-(--page--height)">
       <Card className=" w-96">

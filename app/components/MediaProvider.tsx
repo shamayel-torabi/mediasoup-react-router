@@ -24,6 +24,10 @@ interface ServerToClientEvents {
 
 interface ClientToServerEvents {
     sendMessage: ({ text, userName, roomName }: { text: string, userName: string, roomName: string }) => void,
+    createRoom: (
+        { roomName }: { roomName: string },
+        ackCb: ({ roomId }: { roomId: string }) => void
+    ) => void,
     joinRoom: (
         data: { userName: string, roomName: string },
         ackCb: ({ routerRtpCapabilities, newRoom, messages }: { routerRtpCapabilities: mds.RtpCapabilities, newRoom: boolean, messages: Message[] }) => void

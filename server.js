@@ -85,44 +85,49 @@ connections.on("connection", (socket) => {
     console.log("Peer disconnected");
   });
 
-  socket.on("joinRoom", async ({ userName, roomName }, ackCb) => {
-    let newRoom = false;
-    let requestedRoom = rooms.find((room) => room.roomName === roomName);
+  socket.on("createRoom", async ({ roomName }, ackCb) => {
+    const workerToUse = await getWorker(workers);
+    const requestedRoom = new Room(roomName, workerToUse);
+    await requestedRoom.createRouter(io);
+    rooms.push(requestedRoom);
 
-    if (!requestedRoom) {
-      newRoom = true;
-      // make the new room, add a worker, add a router
-      const workerToUse = await getWorker(workers);
-      requestedRoom = new Room(roomName, workerToUse);
-      await requestedRoom.createRouter(io);
-      rooms.push(requestedRoom);
-    }
-
-    client = new Client(userName, requestedRoom, socket);
-
-    socket.join(client.room.roomName);
+    socket.join(requestedRoom.id);
 
     ackCb({
-      routerRtpCapabilities: client.room.router.rtpCapabilities,
-      newRoom,
-      messages: client.room.messages,
+      roomId: requestedRoom.id,
     });
   });
 
-  socket.on("sendMessage", ({ text, userName, roomName }) => {
+  socket.on("joinRoom", async ({ userName, roomId }, ackCb) => {
+    let requestedRoom = rooms.find((room) => room.id === roomId);
+
+    if (requestedRoom) {
+      client = new Client(userName, requestedRoom, socket);
+
+      ackCb({
+        routerRtpCapabilities: client.room.router.rtpCapabilities,
+        messages: client.room.messages,
+      });
+    } else {
+      console.log(`room with Id:${roomId} not found`);
+      ackCb({ error: "جلسه با این مشخصات موجود نمی باشد" });
+    }
+  });
+
+  socket.on("sendMessage", ({ text, userName, roomId }) => {
     const message = {
       id: crypto.randomUUID().toString(),
       text,
       userName,
       date: new Date().toISOString(),
     };
-    const requestedRoom = rooms.find((room) => room.roomName === roomName);
+    const requestedRoom = rooms.find((room) => room.id === roomId);
 
     if (requestedRoom) {
       requestedRoom.addMessage(message);
       connections.to(requestedRoom.roomName).emit("newMessage", message);
     } else {
-      console.log(`room ${roomName} not found`);
+      console.log(`room with Id:${roomId} not found`);
     }
   });
 });
