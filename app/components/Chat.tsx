@@ -1,6 +1,5 @@
 import type { Message } from "~/types";
 import { useMediaContext } from "./MediaProvider";
-import { Card, CardContent } from "./ui/card";
 import { Input } from "./ui/input";
 import React from "react";
 
@@ -46,15 +45,13 @@ function Chat() {
     })
 
     return (
-        <section className="grid h-full m-2">
-            <Card className="h-(--message--page--height) overflow-y-auto mb-1">
-                <CardContent className="p-2">
-                    <ul className="h-full">
-                        {mm.map((m) => <ChatMessage message={m} key={m.id} />)}
-                    </ul>
-                </CardContent>
-            </Card>
-            <div className="h-(--message--pane)">
+        <div className="grid mt-2 mx-2 bg-card text-card-foreground rounded-xl border shadow-sm">
+            <div className="h-(--message--page--height) overflow-y-auto rounded-sm border shadow-sm mt-2 mx-2 p-2">
+                <ul className="h-full ">
+                    {mm.map((m) => <ChatMessage message={m} key={m.id} />)}
+                </ul>
+            </div>
+            <div className="h-(--message--pane) pt-1 px-2">
                 <form onSubmit={handleSubmit}>
                     <div className="flex">
                         <Input
@@ -72,7 +69,7 @@ function Chat() {
                     </div>
                 </form>
             </div>
-        </section>
+        </div>
     )
 }
 

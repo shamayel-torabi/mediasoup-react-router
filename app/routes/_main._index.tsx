@@ -11,6 +11,7 @@ import {
 import { Label } from "~/components/ui/label";
 import { Input } from "~/components/ui/input";
 import {v5 as uuidv5} from 'uuid';
+import { Errors } from "~/components/Errors";
 
 const UUIDV5_NAMESPACE = 'af6f650e-3ced-4f80-afef-f956afe3191d';
 
@@ -29,9 +30,12 @@ export async function action({ request }: Route.ActionArgs) {
     const roomId = uuidv5(roomName, UUIDV5_NAMESPACE);
     return redirect(`/room/${roomId}`)
   }
+  else{
+    return {error: "نام نشست باید وارد شود"}
+  }
 }
 
-export default function Home() {
+export default function Home({ actionData }: Route.ComponentProps) {
   return (
     <section className="grid items-center justify-center h-(--page--height)">
       <Card className=" w-96">
@@ -43,10 +47,11 @@ export default function Home() {
             <div className="mb-5 grid w-full max-w-sm items-center gap-1.5">
               <Label htmlFor="room">نام نشست</Label>
               <Input type="text" name="room" id="room" placeholder="نام نشست را وارد کنید" />
+              <Errors errors={[actionData?.error!]} />
             </div>
           </CardContent>
-          <CardFooter>
-            <Button variant="outline" type="submit">ورود به نشست</Button>
+          <CardFooter className="flex justify-end">
+            <Button variant="outline" type="submit">ورود</Button>
           </CardFooter>
         </Form>
       </Card>
