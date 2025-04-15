@@ -8,9 +8,8 @@ import config from "../config.js";
 // Rooms can be inside of clients, clients inside of rooms,
 // transports can belong to rooms or clients, etc.
 class Room {
-  constructor(id, roomName, workerToUse) {
-    this.id = id;
-    this.roomName = roomName;
+  constructor(roomId, workerToUse) {
+    this.id = roomId;
     this.worker = workerToUse;
     this.router = null;
     //all the Client objects that are in this room

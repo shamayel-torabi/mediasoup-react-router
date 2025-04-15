@@ -9,12 +9,11 @@ import { io, Socket } from 'socket.io-client';
 import mds from 'mediasoup-client/types';
 import type { Message } from '~/types';
 import { useUserContext } from './UserProvider';
-import { toast } from "sonner"
+import { toast } from 'sonner';
 
 type MediaContextType = {
     messages: Message[],
     sendMessage: (text: string) => Promise<void>,
-    createRoom: (roomName: string) => Promise<string | undefined>
     joinRoom: (roomId: string) => Promise<void>
 }
 
@@ -26,13 +25,9 @@ interface ServerToClientEvents {
 
 interface ClientToServerEvents {
     sendMessage: ({ text, userName, roomId }: { text: string, userName: string, roomId: string }) => void,
-    createRoom: (
-        { roomName }: { roomName: string },
-        ackCb: ({ roomId }: { roomId: string }) => void
-    ) => void,
     joinRoom: (
         data: { userName: string, roomId: string },
-        ackCb: ({ routerRtpCapabilities, messages, error }: { routerRtpCapabilities: mds.RtpCapabilities, messages: Message[], error?: string }) => void
+        ackCb: ({ routerRtpCapabilities, newRoom, messages }: { routerRtpCapabilities: mds.RtpCapabilities, newRoom: boolean, messages: Message[] }) => void
     ) => void
 }
 
@@ -53,6 +48,7 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
         });
         socket.on("newMessage", (message) => {
             //console.log('recieve message:', message)
+            toast("پیام جدید")
             setMessages(prev => [...prev, message])
         })
         return () => { socket.disconnect(); };
@@ -65,21 +61,9 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
         }
     }
 
-    const createRoom = async (roomName: string) => {
-        const createRoomResp = await socket?.emitWithAck("createRoom", { roomName });
-        if (createRoomResp?.roomId) {
-            return createRoomResp?.roomId;
-        }
-    }
     const joinRoom = async (room: string) => {
-        const joinRoomResp = await socket?.emitWithAck("joinRoom", { userName: user?.email!, roomId: room });
-        
-        if(joinRoomResp?.error){
-            console.log(joinRoomResp?.error)
-            toast(joinRoomResp?.error)
-            return
-        }
-        
+        const joinRoomResp = await socket?.emitWithAck("joinRoom", { userName: user?.email!, roomId: room });        
+       
         if (joinRoomResp?.messages) {
             setMessages(joinRoomResp.messages)
         }
@@ -90,7 +74,6 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
     const contextValue: MediaContextType = {
         messages,
         sendMessage,
-        createRoom,
         joinRoom
     }
     return (

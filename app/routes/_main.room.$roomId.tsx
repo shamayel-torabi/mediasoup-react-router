@@ -3,12 +3,11 @@ import { useState } from "react";
 import { useMediaContext } from "~/components/MediaProvider";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
-import type { Route } from "./+types/_main.room$roomId";
+import type { Route } from "./+types/_main.room.$roomId";
 
 export async function loader({ params }: Route.LoaderArgs) {
   //const searchParams = new URL(request.url).searchParams;
   const roomId = params.roomId;
-  console.log('roomId:', roomId)
   return { roomId }
 }
 

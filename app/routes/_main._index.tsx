@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router";
+import { Form, redirect } from "react-router";
 import type { Route } from "./+types/_main._index";
 import { Button } from "~/components/ui/button";
 import {
@@ -10,7 +10,9 @@ import {
 } from "~/components/ui/card";
 import { Label } from "~/components/ui/label";
 import { Input } from "~/components/ui/input";
-import { useMediaContext } from "~/components/MediaProvider";
+import {v5 as uuidv5} from 'uuid';
+
+const UUIDV5_NAMESPACE = 'af6f650e-3ced-4f80-afef-f956afe3191d';
 
 export function meta({ }: Route.MetaArgs) {
   return [
@@ -19,25 +21,21 @@ export function meta({ }: Route.MetaArgs) {
   ];
 }
 
-export default function Home() {
-  const { createRoom } = useMediaContext();
-  const navigate = useNavigate();
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const roomName = formData.get("room") as string;
-    const roomId = await createRoom(roomName);
-
-    if(roomId){
-      navigate(`/room/${roomId}`)
-    }
+export async function action({ request }: Route.ActionArgs) {
+  const formData = await request.formData();
+  const roomName = formData.get("room") as string;
+  
+  if (roomName) {
+    const roomId = uuidv5(roomName, UUIDV5_NAMESPACE);
+    return redirect(`/room/${roomId}`)
   }
+}
 
+export default function Home() {
   return (
     <section className="grid items-center justify-center h-(--page--height)">
       <Card className=" w-96">
-        <form onSubmit={handleSubmit} >
+        <Form method="post" >
           <CardHeader className="mb-5">
             <CardTitle>ورود به نشست</CardTitle>
           </CardHeader>
@@ -50,7 +48,7 @@ export default function Home() {
           <CardFooter>
             <Button variant="outline" type="submit">ورود به نشست</Button>
           </CardFooter>
-        </form>
+        </Form>
       </Card>
     </section>
   )

@@ -7,13 +7,11 @@ import createWorkers from "./mediasoup/utilities/createWorkers.js";
 import Client from "./mediasoup/classes/Client.js";
 import getWorker from "./mediasoup/utilities/getWorker.js";
 import Room from "./mediasoup/classes/Room.js";
-import {v5 as uuidv5} from 'uuid';
 
 // Short-circuit the type-checking of the built output.
 const BUILD_PATH = "./build/server/index.js";
 const DEVELOPMENT = process.env.NODE_ENV === "development";
 const PORT = Number.parseInt(process.env.PORT || "3000");
-const UUIDV5_NAMESPACE = 'af6f650e-3ced-4f80-afef-f956afe3191d';
 
 const app = express();
 
@@ -87,38 +85,28 @@ connections.on("connection", (socket) => {
     console.log("Peer disconnected");
   });
 
-  socket.on("createRoom", async ({ roomName }, ackCb) => {
-    const id = uuidv5(roomName, UUIDV5_NAMESPACE);
-    let requestedRoom = rooms.find((room) => room.id === id);
+  socket.on("joinRoom", async ({ userName, roomId }, ackCb) => {
+    let newRoom = false;
+    let requestedRoom = rooms.find((room) => room.id === roomId);
 
     if (!requestedRoom) {
+      newRoom = true;
+      // make the new room, add a worker, add a router
       const workerToUse = await getWorker(workers);
-      requestedRoom = new Room(id, roomName, workerToUse);
+      requestedRoom = new Room(roomId, workerToUse);
       await requestedRoom.createRouter(io);
       rooms.push(requestedRoom);
     }
 
-    socket.join(requestedRoom.id);
+    client = new Client(userName, requestedRoom, socket);
+
+    socket.join(client.room.id);
 
     ackCb({
-      roomId: requestedRoom.id,
-    });   
-  });
-
-  socket.on("joinRoom", async ({ userName, roomId }, ackCb) => {
-    let requestedRoom = rooms.find((room) => room.id === roomId);
-
-    if (requestedRoom) {
-      client = new Client(userName, requestedRoom, socket);
-
-      ackCb({
-        routerRtpCapabilities: client.room.router.rtpCapabilities,
-        messages: client.room.messages,
-      });
-    } else {
-      console.log(`room with Id:${roomId} not found`);
-      ackCb({ error: "جلسه با این مشخصات موجود نمی باشد" });
-    }
+      routerRtpCapabilities: client.room.router.rtpCapabilities,
+      newRoom,
+      messages: client.room.messages,
+    });
   });
 
   socket.on("sendMessage", ({ text, userName, roomId }) => {
