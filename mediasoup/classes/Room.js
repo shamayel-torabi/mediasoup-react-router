@@ -1,3 +1,4 @@
+// @ts-nocheck
 import config from "../config.js";
 
 
@@ -149,7 +150,7 @@ class Room {
     // based on the new activeSpeakerList. Now, send out the consumers that
     // need to be made.
     // Broadcast to this room
-    io.to(this.roomName).emit("updateActiveSpeakers", activeSpeakers);
+    io.to(this.id).emit("updateActiveSpeakers", activeSpeakers);
     return newTransportsByPeer;
   };
 }

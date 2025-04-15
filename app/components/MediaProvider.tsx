@@ -6,7 +6,7 @@ import {
 } from 'react'
 import { io, Socket } from 'socket.io-client';
 
-import mds from 'mediasoup-client/types';
+import { type DtlsParameters, type IceCandidate, type IceParameters, type RtpCapabilities, type RtpParameters } from 'mediasoup-client/types';
 import type { Message } from '~/types';
 import { useUserContext } from './UserProvider';
 import { toast } from 'sonner';
@@ -21,13 +21,45 @@ type MediaContextType = {
 interface ServerToClientEvents {
     connectionSuccess: (data: { socketId: string }) => void,
     newMessage: (message: Message) => void;
+    newProducersToConsume: (
+        {
+            routerRtpCapabilities,
+            audioPidsToCreate,
+            videoPidsToCreate,
+            associatedUserNames,
+            activeSpeakerList
+        }
+            : {
+                routerRtpCapabilities: RtpCapabilities,
+                audioPidsToCreate: string[],
+                videoPidsToCreate: string[],
+                associatedUserNames: string[],
+                activeSpeakerList: string[]
+            }) => void
 }
 
 interface ClientToServerEvents {
     sendMessage: ({ text, userName, roomId }: { text: string, userName: string, roomId: string }) => void,
     joinRoom: (
         data: { userName: string, roomId: string },
-        ackCb: ({ routerRtpCapabilities, newRoom, messages }: { routerRtpCapabilities: mds.RtpCapabilities, newRoom: boolean, messages: Message[] }) => void
+        ackCb: ({ routerRtpCapabilities, newRoom, messages }: { routerRtpCapabilities: RtpCapabilities, newRoom: boolean, messages: Message[] }) => void
+    ) => void,
+    requestTransport: (
+        { type, audioPid }: { type: string, audioPid?: string },
+        ackCb: (clientTransportParams: { id: string, iceParameters: IceParameters, iceCandidates: IceCandidate, dtlsParameters: DtlsParameters }) => void
+    ) => void,
+    connectTransport: (
+        { dtlsParameters, type, audioPid }: { dtlsParameters: DtlsParameters, type: string, audioPid?: string },
+        ackCb: (status: string) => void
+    ) => void,
+    startProducing: (
+        { kind, rtpParameters }: { kind: string, rtpParameters: RtpParameters },
+        ackCb: ({ id, error }: { id: string, error?: unknown }) => void
+    ) => void,
+    audioChange: (typeOfChange: string) => void,
+    consumeMedia: (
+        { rtpCapabilities, pid, kind }: { rtpCapabilities: RtpCapabilities, pid: string, kind: string },
+        ackCb: (status: string) => void
     ) => void
 }
 
@@ -47,7 +79,6 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
             console.log(`socket connection Id: ${data.socketId}`)
         });
         socket.on("newMessage", (message) => {
-            //console.log('recieve message:', message)
             toast("پیام جدید")
             setMessages(prev => [...prev, message])
         })
@@ -62,8 +93,8 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
     }
 
     const joinRoom = async (room: string) => {
-        const joinRoomResp = await socket?.emitWithAck("joinRoom", { userName: user?.email!, roomId: room });        
-       
+        const joinRoomResp = await socket?.emitWithAck("joinRoom", { userName: user?.email!, roomId: room });
+
         if (joinRoomResp?.messages) {
             setMessages(joinRoomResp.messages)
         }

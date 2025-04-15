@@ -11,7 +11,7 @@ const ChatMessage = React.memo(({ message }: { message: Message }) => {
     return (
         <li>
             <div className="flex items-start gap-2.5 mb-2">
-                <img className="w-8 h-8 rounded-full" src="/images/people/profile-picture-3.jpg" alt="Jese image" />
+                <img className="w-8 h-8 rounded-full" src="/images/people/sham.jpg" alt="Jese image" />
                 <div className="flex flex-col w-[12rem] leading-1.5 p-4 border-gray-200 bg-gray-100 rounded-e-xl rounded-es-xl dark:bg-gray-700">
                     <div className="flex items-center justify-between space-x-2 rtl:space-x-reverse">
                         <span className="text-sm font-semibold text-gray-900 dark:text-white">{message.userName}</span>
