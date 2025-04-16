@@ -1,5 +1,5 @@
 import Chat from "~/components/Chat";
-import { useState } from "react";
+import { useRef } from "react";
 import { useMediaContext } from "~/components/MediaProvider";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
@@ -13,30 +13,21 @@ export async function loader({ params }: Route.LoaderArgs) {
 
 export default function Room({ loaderData }: Route.ComponentProps) {
   const { roomId } = loaderData;
-  const { joinRoom } = useMediaContext()
-
-  const [join, setJoin] = useState(false);
+  const { joinRoom, muteAudio } = useMediaContext();
+  const localMediaLeft = useRef<HTMLVideoElement | undefined>(undefined)
 
   if (!roomId) {
     throw new Error("نام نشست باید وجود داشته باشد")
   }
 
   const handleJoin = async () => {
-    await joinRoom(roomId);
-    setJoin(true);
+    if (localMediaLeft.current) {
+      await joinRoom(roomId, localMediaLeft.current);
+    }
   }
 
-  if (!join) {
-
-    return (
-      <div className="grid items-center justify-center h-(--page--height)">
-        <Button variant="outline" onClick={handleJoin}>پیوستن به نشست</Button>
-      </div>)
-  }
-
-  const style = {
-    width: "18%",
-    height: "80px"
+  const handleMute = async () => {
+    const result = await muteAudio();
   }
 
   return (
@@ -44,20 +35,26 @@ export default function Room({ loaderData }: Route.ComponentProps) {
       <Card className="flex-1 my-2 ms-2">
         <CardContent>
           <div>
-            <div id="remote-media" className="grid grid-cols-4" >
+            <div className="grid grid-flow-col justify-items-center">
+              <div className="space-x-1">
+                <Button variant="outline" onClick={handleJoin}>پیوستن به نشست</Button>
+                <Button variant="outline" onClick={handleMute}>Mute</Button>
+              </div>
+            </div>
+            <div className="my-2 grid grid-flow-col justify-items-center">
               <div className="remote-video-container remote-speaker">
                 <video id="remote-video-1" className="w-32 h-full" autoPlay controls></video>
                 <div id="username-1"></div>
               </div>
-              <div className="remote-video-container" style={style}>
+              <div className="remote-video-container" >
                 <video id="remote-video-2" className="w-32 h-full remote-video" autoPlay controls></video>
                 <div id="username-2"></div>
               </div>
-              <div className="remote-video-container" style={style}>
+              <div className="remote-video-container" >
                 <video id="remote-video-3" className="w-32 h-full remote-video" autoPlay controls></video>
                 <div id="username-3" className="username"></div>
               </div>
-              <div className="remote-video-container" style={style}>
+              <div className="remote-video-container">
                 <video id="remote-video-4" className="w-32 h-full remote-video" autoPlay controls></video>
                 <div id="username-4" className="username"></div>
               </div>
@@ -74,7 +71,7 @@ export default function Room({ loaderData }: Route.ComponentProps) {
               <div >
                 <div id="local-media" className="position-relative" style={{ height: "150px" }}>
                   <div className="position-absolute">
-                    <video id="local-video-left" className="border border-primary" muted autoPlay></video>
+                    <video ref={localMediaLeft} className="border border-primary" muted autoPlay></video>
                   </div>
                 </div>
               </div>
