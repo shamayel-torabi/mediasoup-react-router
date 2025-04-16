@@ -115,6 +115,7 @@ export const useSocket = () => {
     clientSocket.on("connectionSuccess", (data) => {
       console.log(`socket connection Id: ${data.socketId}`);
     });
+
     clientSocket.on("newMessage", (message) => {
       setMessages((prev) => [...prev, message]);
     });
@@ -149,5 +150,60 @@ export const useSocket = () => {
     return await socket?.emitWithAck("requestTransport", { type, audioPid });
   };
 
-  return { messages, socketSendMessage, join, requestTransport };
+  const connectTransport = async (
+    dtlsParameters: DtlsParameters,
+    type: string,
+    audioPid?: string
+  ) => {
+    const connectResp = await socket?.emitWithAck("connectTransport", {
+      dtlsParameters,
+      type,
+      audioPid,
+    });
+
+    return connectResp;
+  };
+
+  const startProducing = async (kind: string, rtpParameters: RtpParameters) => {
+    const produceResp = await socket?.emitWithAck("startProducing", {
+      kind,
+      rtpParameters,
+    });
+
+    return produceResp;
+  };
+
+  const audioChange = (typeOfChange: string) => {
+    socket?.emit("audioChange", typeOfChange);
+  };
+
+  const consumeMedia = async (
+    rtpCapabilities: RtpCapabilities,
+    pid: string,
+    kind: string
+  ) => {
+    const consumerParams = await socket?.emitWithAck("consumeMedia", {
+      rtpCapabilities,
+      pid,
+      kind,
+    });
+
+    return consumerParams;
+  };
+
+  const unpauseConsumer = async (pid: string, kind: string) => {
+    await socket?.emitWithAck("unpauseConsumer", { pid, kind });
+  };
+
+  return {
+    messages,
+    socketSendMessage,
+    join,
+    requestTransport,
+    connectTransport,
+    startProducing,
+    audioChange,
+    consumeMedia,
+    unpauseConsumer,
+  };
 };

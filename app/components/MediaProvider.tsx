@@ -34,7 +34,7 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
 
     const joinRoom = async (room: string) => {
         const joinRoomResp = await join(user?.email!, room);
-        console.log('joinRoomResp:', joinRoomResp)
+        //console.log('joinRoomResp:', joinRoomResp)
 
         if (joinRoomResp) {
             setRoomId(room);
@@ -50,13 +50,13 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
         });
 
         setDevice(d);
-        console.log('device:', d);
+        //console.log('device:', d);
 
         //requestTransportToConsume(joinRoomResp, socket, d, consumers);
 
 
         const requestTransportResp = await requestTransport('producer');
-        console.log('requestTransportResp:', requestTransportResp)
+        //console.log('requestTransportResp:', requestTransportResp)
     }
 
     const contextValue: MediaContextType = {
