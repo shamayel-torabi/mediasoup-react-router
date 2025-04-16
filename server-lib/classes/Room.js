@@ -1,6 +1,6 @@
 // @ts-nocheck
+import { EventEmitter } from "node:events";
 import config from "../config.js";
-
 
 //import newDominantSpeaker from "../utilities/newDominantSpeaker.js";
 
@@ -8,8 +8,9 @@ import config from "../config.js";
 // things like that. It doesn't care, or know, about rooms.
 // Rooms can be inside of clients, clients inside of rooms,
 // transports can belong to rooms or clients, etc.
-class Room {
+class Room extends EventEmitter {
   constructor(roomId, workerToUse) {
+    super();
     this.id = roomId;
     this.worker = workerToUse;
     this.router = null;
@@ -19,6 +20,14 @@ class Room {
     this.activeSpeakerList = [];
     this.messages = [];
   }
+
+  close() {
+    if (this.router) {
+      this.router.close();
+    }
+    this.emit("close");
+  }
+
   addClient(client) {
     this.clients.push(client);
   }
@@ -153,6 +162,38 @@ class Room {
     io.to(this.id).emit("updateActiveSpeakers", activeSpeakers);
     return newTransportsByPeer;
   };
+
+  pidsToCreate = () => {
+    //fetch the first 0-5 pids in activeSpeakerList
+    const audioPidsToCreate = this.activeSpeakerList.slice(0, 5);
+    //find the videoPids and make an array with matching indicies
+    // for our audioPids.
+    const videoPidsToCreate = audioPidsToCreate.map((aid) => {
+      const producingClient = this.clients.find(
+        (c) => c?.producer?.audio?.id === aid
+      );
+      return producingClient?.producer?.video?.id;
+    });
+    //find the username and make an array with matching indicies
+    // for our audioPids/videoPids.
+    const associatedUserNames = audioPidsToCreate.map((aid) => {
+      const producingClient = this.clients.find(
+        (c) => c?.producer?.audio?.id === aid
+      );
+      return producingClient?.userName;
+    });
+
+    return { audioPidsToCreate, videoPidsToCreate, associatedUserNames };
+  }
+
+  getProducingVideo = (audioPid) =>{
+    const producingClient = this.clients.find(
+      (c) => c?.producer?.audio?.id === audioPid
+    );
+    const videoPid = producingClient?.producer?.video?.id;
+
+    return videoPid;
+  }
 }
 
 export default Room;

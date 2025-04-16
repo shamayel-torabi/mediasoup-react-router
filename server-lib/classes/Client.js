@@ -1,8 +1,10 @@
 // @ts-nocheck
+import { EventEmitter } from "node:events";
 import config from "../config.js";
 
-class Client {
+class Client extends EventEmitter {
   constructor(userName, room, socket) {
+    super()
     this.userName = userName;
     this.socket = socket;
     //instead of calling this producerTransport, call it upstream, THIS client's transport
@@ -27,6 +29,18 @@ class Client {
     this.room = room; // this will be a Room object
     this.room.addClient(this);
   }
+
+  close() {
+    if (this.upstreamTransport) {
+      this.upstreamTransport.close();
+      this.downstreamTransports.forEach((downstreamTransport) =>
+        downstreamTransport.transport.close()
+      );
+    }
+
+    this.emit('close')
+  }
+
   addTransport(type, audioPid = null, videoPid = null) {
     return new Promise(async (resolve, reject) => {
       const { listenIps, initialAvailableOutgoingBitrate, maxIncomingBitrate } =

@@ -1,15 +1,14 @@
 import {
     createContext,
     useContext,
-    useEffect,
     useState
 } from 'react'
-import { io, Socket } from 'socket.io-client';
 
-import { type DtlsParameters, type IceCandidate, type IceParameters, type RtpCapabilities, type RtpParameters } from 'mediasoup-client/types';
+import { Device } from 'mediasoup-client/types';
 import type { Message } from '~/types';
 import { useUserContext } from './UserProvider';
 import { toast } from 'sonner';
+import { useSocket } from '~/hooks/useSocket';
 
 type MediaContextType = {
     messages: Message[],
@@ -17,89 +16,47 @@ type MediaContextType = {
     joinRoom: (roomId: string) => Promise<void>
 }
 
-
-interface ServerToClientEvents {
-    connectionSuccess: (data: { socketId: string }) => void,
-    newMessage: (message: Message) => void;
-    newProducersToConsume: (
-        {
-            routerRtpCapabilities,
-            audioPidsToCreate,
-            videoPidsToCreate,
-            associatedUserNames,
-            activeSpeakerList
-        }
-            : {
-                routerRtpCapabilities: RtpCapabilities,
-                audioPidsToCreate: string[],
-                videoPidsToCreate: string[],
-                associatedUserNames: string[],
-                activeSpeakerList: string[]
-            }) => void
-}
-
-interface ClientToServerEvents {
-    sendMessage: ({ text, userName, roomId }: { text: string, userName: string, roomId: string }) => void,
-    joinRoom: (
-        data: { userName: string, roomId: string },
-        ackCb: ({ routerRtpCapabilities, newRoom, messages }: { routerRtpCapabilities: RtpCapabilities, newRoom: boolean, messages: Message[] }) => void
-    ) => void,
-    requestTransport: (
-        { type, audioPid }: { type: string, audioPid?: string },
-        ackCb: (clientTransportParams: { id: string, iceParameters: IceParameters, iceCandidates: IceCandidate, dtlsParameters: DtlsParameters }) => void
-    ) => void,
-    connectTransport: (
-        { dtlsParameters, type, audioPid }: { dtlsParameters: DtlsParameters, type: string, audioPid?: string },
-        ackCb: (status: string) => void
-    ) => void,
-    startProducing: (
-        { kind, rtpParameters }: { kind: string, rtpParameters: RtpParameters },
-        ackCb: ({ id, error }: { id: string, error?: unknown }) => void
-    ) => void,
-    audioChange: (typeOfChange: string) => void,
-    consumeMedia: (
-        { rtpCapabilities, pid, kind }: { rtpCapabilities: RtpCapabilities, pid: string, kind: string },
-        ackCb: (status: string) => void
-    ) => void
-}
-
 const MediaContext = createContext<MediaContextType>({} as MediaContextType)
 
 export default function MediaProvider({ children }: Readonly<{ children: React.ReactNode }>) {
-    const [socket, setSocket] = useState<Socket<ServerToClientEvents, ClientToServerEvents>>();
-    const [messages, setMessages] = useState<Message[]>([]);
+    const { messages, socketSendMessage, join, requestTransport } = useSocket();
     const [roomId, setRoomId] = useState<string>('')
+    const [device, setDevice] = useState<Device>()
     const { user } = useUserContext();
 
-    useEffect(() => {
-        const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io("/mediasoup");
-
-        setSocket(socket);
-        socket.on("connectionSuccess", (data) => {
-            console.log(`socket connection Id: ${data.socketId}`)
-        });
-        socket.on("newMessage", (message) => {
-            toast("پیام جدید")
-            setMessages(prev => [...prev, message])
-        })
-        return () => { socket.disconnect(); };
-    }, []);
 
     const sendMessage = async (text: string) => {
         if (roomId) {
             const userName = `${user?.firstName} ${user?.lastName}`;
-            socket?.emit('sendMessage', { text, userName, roomId });
+            socketSendMessage( text, userName, roomId);
         }
     }
 
     const joinRoom = async (room: string) => {
-        const joinRoomResp = await socket?.emitWithAck("joinRoom", { userName: user?.email!, roomId: room });
+        const joinRoomResp = await join(user?.email!, room);
+        console.log('joinRoomResp:', joinRoomResp)
 
-        if (joinRoomResp?.messages) {
-            setMessages(joinRoomResp.messages)
+        if (joinRoomResp) {
+            setRoomId(room);
+        }
+        else {
+            toast('خطا هنگام پیوستن به نشست !')
+            return;
         }
 
-        setRoomId(room);
+        let d = new Device();
+        await d.load({
+            routerRtpCapabilities: joinRoomResp.routerRtpCapabilities,
+        });
+
+        setDevice(d);
+        console.log('device:', d);
+
+        //requestTransportToConsume(joinRoomResp, socket, d, consumers);
+
+
+        const requestTransportResp = await requestTransport('producer');
+        console.log('requestTransportResp:', requestTransportResp)
     }
 
     const contextValue: MediaContextType = {
