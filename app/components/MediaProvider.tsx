@@ -5,7 +5,7 @@ import {
 } from 'react'
 
 import { Device } from 'mediasoup-client/types';
-import type { Message } from '~/types';
+import type { MediaConsumer, Message } from '~/types';
 import { useUserContext } from './UserProvider';
 import { toast } from 'sonner';
 import { useSocket } from '~/hooks/useSocket';
@@ -19,16 +19,19 @@ type MediaContextType = {
 const MediaContext = createContext<MediaContextType>({} as MediaContextType)
 
 export default function MediaProvider({ children }: Readonly<{ children: React.ReactNode }>) {
-    const { messages, socketSendMessage, join, requestTransport } = useSocket();
-    const [roomId, setRoomId] = useState<string>('')
-    const [device, setDevice] = useState<Device>()
+    const { messages, socketSendMessage, join, requestTransport, requestTransportToConsume} = useSocket();
+    const [roomId, setRoomId] = useState<string>('');
+    const [device, setDevice] = useState<Device>();
+    const [consumers, setConsumers] = useState<Record<string, MediaConsumer>>({})
     const { user } = useUserContext();
+
+    
 
 
     const sendMessage = async (text: string) => {
         if (roomId) {
             const userName = `${user?.firstName} ${user?.lastName}`;
-            socketSendMessage( text, userName, roomId);
+            socketSendMessage(text, userName, roomId);
         }
     }
 
@@ -52,8 +55,13 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
         setDevice(d);
         //console.log('device:', d);
 
-        //requestTransportToConsume(joinRoomResp, socket, d, consumers);
+        const aa = {
+            audioPidsToCreate: joinRoomResp.audioPidsToCreate,
+            videoPidsToCreate: joinRoomResp.videoPidsToCreate,
+            associatedUserNames: joinRoomResp.associatedUserNames
+        }
 
+        const consumer = requestTransportToConsume(aa, d);
 
         const requestTransportResp = await requestTransport('producer');
         //console.log('requestTransportResp:', requestTransportResp)

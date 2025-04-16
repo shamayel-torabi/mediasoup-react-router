@@ -1,3 +1,4 @@
+import type { Consumer, Transport } from "mediasoup-client/types"
 
 export type Message = {
     id: string
@@ -15,5 +16,13 @@ export type User = {
     lastName: string;
     image: string | null;
     createdAt: Date;
+}
+
+export type MediaConsumer = {
+    combinedStream: MediaStream;
+    userName: string;
+    consumerTransport: Transport;
+    audioConsumer: Consumer,
+    videoConsumer: Consumer
 }
 

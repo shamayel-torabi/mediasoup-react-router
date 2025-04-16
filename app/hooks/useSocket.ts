@@ -1,13 +1,16 @@
 import type {
+  Consumer,
+  ConsumerOptions,
+  Device,
   DtlsParameters,
-  IceCandidate,
-  IceParameters,
   RtpCapabilities,
   RtpParameters,
+  Transport,
+  TransportOptions,
 } from "mediasoup-client/types";
 import { useEffect, useState } from "react";
 import { io, Socket } from "socket.io-client";
-import type { Message } from "~/types";
+import type { MediaConsumer, Message } from "~/types";
 
 interface ServerToClientEvents {
   connectionSuccess: (data: { socketId: string }) => void;
@@ -57,12 +60,7 @@ interface ClientToServerEvents {
   ) => void;
   requestTransport: (
     { type, audioPid }: { type: string; audioPid?: string },
-    ackCb: (clientTransportParams: {
-      id: string;
-      iceParameters: IceParameters;
-      iceCandidates: IceCandidate;
-      dtlsParameters: DtlsParameters;
-    }) => void
+    ackCb: (clientTransportParams: TransportOptions) => void
   ) => void;
   connectTransport: (
     {
@@ -84,15 +82,10 @@ interface ClientToServerEvents {
       kind,
     }: { rtpCapabilities: RtpCapabilities; pid: string; kind: string },
     ackCb: ({
-      clientParams,
+      consumerOptions,
       status,
     }: {
-      clientParams: {
-        producerId: string;
-        id: string;
-        kind: string;
-        rtpParameters: RtpParameters;
-      };
+      consumerOptions: ConsumerOptions;
       status?: string;
     }) => void
   ) => void;
@@ -195,6 +188,135 @@ export const useSocket = () => {
     await socket?.emitWithAck("unpauseConsumer", { pid, kind });
   };
 
+  const createConsumer = (
+    consumerTransport: Transport,
+    pid: string,
+    device: Device,
+    kind: string
+  ) => {
+    return new Promise<Consumer | void>(async (resolve, reject) => {
+      // consume from the basics, emit the consumeMedia event, we take
+      // the params we get back, and run .consume(). That gives us our track
+      const consumerParams = await consumeMedia(
+        device.rtpCapabilities,
+        pid,
+        kind
+      );
+      console.log("consumerParams:", consumerParams);
+      if (consumerParams?.status === "cannotConsume") {
+        console.log("Cannot consume");
+        resolve();
+      } else if (consumerParams?.status === "consumeFailed") {
+        console.log("Consume failed...");
+        resolve();
+      } else {
+        // we got valid params! Use them to consume
+        const consumer = await consumerTransport.consume(
+          consumerParams?.consumerOptions!
+        );
+        console.log("consume() has finished");
+        const { track } = consumer;
+        // add track events
+        //unpause
+        await unpauseConsumer(pid, kind);
+        resolve(consumer);
+      }
+    });
+  };
+
+  const createConsumerTransport = (
+    transportParams: TransportOptions,
+    device: Device,
+    audioPid: string
+  ) => {
+    // make a downstream transport for ONE producer/peer/client (with audio and video producers)
+    const consumerTransport = device.createRecvTransport(transportParams);
+    consumerTransport.on("connectionstatechange", (state) => {
+      console.log("==connectionstatechange==");
+      console.log(state);
+    });
+    consumerTransport.on("icegatheringstatechange", (state) => {
+      console.log("==icegatheringstatechange==");
+      console.log(state);
+    });
+    // transport connect listener... fires on .consume()
+    consumerTransport.on(
+      "connect",
+      async ({ dtlsParameters }, callback, errback) => {
+        console.log("Transport connect event has fired!");
+        // connect comes with local dtlsParameters. We need
+        // to send these up to the server, so we can finish
+        // the connection
+        const connectResp = await connectTransport(
+          dtlsParameters,
+          "consumer",
+          audioPid
+        );
+        console.log(connectResp, "connectResp is back!");
+        if (connectResp?.status === "success") {
+          callback(); //this will finish our await consume
+        } else {
+          errback(new Error("consumerTransport connect Error"));
+        }
+      }
+    );
+    return consumerTransport;
+  };
+
+  const requestTransportToConsume = (
+    consumeData: {
+      audioPidsToCreate: string[];
+      videoPidsToCreate: string[];
+      associatedUserNames: string[];
+    },
+    device: Device
+  ) => {
+    const consumers =  consumeData.audioPidsToCreate.map(async (audioPid, i) => {
+      const videoPid = consumeData.videoPidsToCreate[i];
+      // expecting back transport params for THIS audioPid. Maybe 5 times, maybe 0
+      const consumerTransportParams = await requestTransport(
+        "consumer",
+        audioPid
+      );
+
+      //console.log(consumerTransportParams);
+
+      const consumerTransport = createConsumerTransport(
+        consumerTransportParams!,
+        device,
+        audioPid
+      );
+
+      const [audioConsumer, videoConsumer] = await Promise.all([
+        createConsumer(consumerTransport, audioPid, device, "audio"),
+        createConsumer(consumerTransport, videoPid, device, "video"),
+      ]);
+      console.log(audioConsumer);
+      console.log(videoConsumer);
+      // create a new MediaStream on the client with both tracks
+      // This is why we have gone through all this pain!!!
+      const combinedStream = new MediaStream([
+        audioConsumer?.track!,
+        videoConsumer?.track!,
+      ]);
+      const remoteVideo = document.getElementById(
+        `remote-video-${i}`
+      ) as HTMLVideoElement;
+      remoteVideo.srcObject = combinedStream;
+      console.log("Hope this works...");
+
+      return {
+        combinedStream,
+        userName: consumeData.associatedUserNames[i],
+        consumerTransport,
+        audioConsumer: audioConsumer as Consumer,
+        videoConsumer: videoConsumer as Consumer,
+      };
+    });
+
+    return consumers;
+  };
+
   return {
     messages,
     socketSendMessage,
@@ -204,6 +326,9 @@ export const useSocket = () => {
     startProducing,
     audioChange,
     consumeMedia,
+    createConsumer,
     unpauseConsumer,
+    createConsumerTransport,
+    requestTransportToConsume,
   };
 };
