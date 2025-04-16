@@ -271,7 +271,9 @@ export const useSocket = () => {
     },
     device: Device
   ) => {
-    const consumers =  consumeData.audioPidsToCreate.map(async (audioPid, i) => {
+    let consumers: Record<string, MediaConsumer> = {};
+
+    consumeData.audioPidsToCreate.forEach(async (audioPid, i) => {
       const videoPid = consumeData.videoPidsToCreate[i];
       // expecting back transport params for THIS audioPid. Maybe 5 times, maybe 0
       const consumerTransportParams = await requestTransport(
@@ -305,16 +307,16 @@ export const useSocket = () => {
       remoteVideo.srcObject = combinedStream;
       console.log("Hope this works...");
 
-      return {
+      consumers[audioPid] = {
         combinedStream,
         userName: consumeData.associatedUserNames[i],
         consumerTransport,
-        audioConsumer: audioConsumer as Consumer,
+        audioConsumer: audioConsumer as Consumer ,
         videoConsumer: videoConsumer as Consumer,
       };
     });
 
-    return consumers;
+    return consumers;  
   };
 
   return {

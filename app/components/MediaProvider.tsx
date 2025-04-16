@@ -62,9 +62,10 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
         }
 
         const consumer = requestTransportToConsume(aa, d);
+        setConsumers(consumer);
 
         const requestTransportResp = await requestTransport('producer');
-        //console.log('requestTransportResp:', requestTransportResp)
+        console.log('requestTransportResp:', requestTransportResp)
     }
 
     const contextValue: MediaContextType = {
