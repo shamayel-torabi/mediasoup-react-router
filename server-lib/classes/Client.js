@@ -57,6 +57,12 @@ class Client extends EventEmitter {
     return this.downstreamTransports.find((t) => t?.associatedAudioPid === audioPid);
   }
 
+  getDownstreamConsumer(pid, kind){
+    const consumerToResume = this.downstreamTransports.find((t) => {
+      return t[kind]?.producerId === pid;
+    });
+  }
+
   /**
    * @param {string} type
    */

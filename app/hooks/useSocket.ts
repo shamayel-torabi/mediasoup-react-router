@@ -76,7 +76,7 @@ interface ClientToServerEvents {
   ) => void;
   unpauseConsumer: (
     { pid, kind }: { pid: string; kind: string },
-    ackCb: () => void
+    ackCb: ({ status }: { status: string }) => void
   ) => void;
 }
 
@@ -183,7 +183,7 @@ export const useSocket = (
   };
 
   const unpauseConsumer = async (pid: string, kind: string) => {
-    await socket?.emitWithAck("unpauseConsumer", { pid, kind });
+    return await socket?.emitWithAck("unpauseConsumer", { pid, kind });
   };
 
   const createConsumer = (consumerTransport: Transport, producerId: string, device: Device, kind: string) => {
@@ -213,7 +213,8 @@ export const useSocket = (
           //const { track } = consumer;
           // add track events
           //unpause
-          await unpauseConsumer(producerId, kind);
+          const result = await unpauseConsumer(producerId, kind);
+          console.log('unpauseConsumer result', result)
           resolve(consumer);
         }
       }

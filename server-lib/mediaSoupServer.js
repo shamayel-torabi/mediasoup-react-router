@@ -275,11 +275,16 @@ const runMediaSoupServer = async (app) => {
       }
     });
     socket.on("unpauseConsumer", async ({ pid, kind }, ackCb) => {
-      const consumerToResume = client.downstreamTransports.find((t) => {
-        return t[kind].producerId === pid;
-      });
-      await consumerToResume[kind].resume();
-      ackCb();
+      // const consumerToResume = client.downstreamTransports.find((t) => {
+      //   return t[kind].producerId === pid;
+      // });
+      try{
+        const consumerToResume = client.getDownstreamConsumer(pid, kind);
+        await consumerToResume[kind]?.resume();
+        ackCb({ status: "success" });
+      }catch(error){
+        ackCb({ status: "error" });
+      }
     });
   });
 
