@@ -19,7 +19,8 @@ type MediaContextType = {
     listOfActives: string[],
     creatRoom: (roomName: string) => Promise<string>
     sendMessage: (text: string) => Promise<void>,
-    joinRoom: (roomId: string, localMediaLeft: HTMLVideoElement) => Promise<void>
+    joinRoom: (roomId: string) => Promise<void>,
+    startPublish: (localMediaLeft: HTMLVideoElement) => Promise<void>,
     muteAudio: () => Promise<boolean>,
 }
 
@@ -36,7 +37,7 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
 
     const roomId = useRef<string>(undefined)
     const isProducer = useRef<boolean>(undefined);
-    const localMediaLeft = useRef<HTMLVideoElement>(undefined);
+    //const localMediaLeft = useRef<HTMLVideoElement>(undefined);
     const producerTransport = useRef<Transport>(undefined);
     const audioProducer = useRef<Producer>(undefined);
     const videoProducer = useRef<Producer>(undefined);
@@ -46,7 +47,7 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
         setMessages((prev) => [...prev, newMessage]);
     }
 
-    const newRoomCreated = (room: Room) =>{
+    const newRoomCreated = (room: Room) => {
         setRooms((prev) => [...prev, room]);
     }
 
@@ -125,27 +126,6 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
             requestTransportToConsume(consumeData.current);
             console.log('startProducing:', consumeData)
         }
-
-        const localStream = await navigator.mediaDevices.getUserMedia({
-            video: true,
-            audio: true,
-        });
-
-        if (localMediaLeft.current) {
-            localMediaLeft.current.srcObject = localStream;
-        }
-
-        try {
-            const pTransport = await createProducerTransport(device!);
-            producerTransport.current = pTransport;
-
-            const producers = await createProducer(localStream, pTransport);
-            audioProducer.current = producers.audioProducer;
-            videoProducer.current = producers.videoProducer
-        }
-        catch (err) {
-            console.log(err)
-        }
     }
 
     useEffect(() => {
@@ -186,8 +166,7 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
         }
     }
 
-    const joinRoom = async (room: string, localMedia: HTMLVideoElement) => {
-        localMediaLeft.current = localMedia;
+    const joinRoom = async (room: string) => {
 
         const joinRoomResp = await joinMediaSoupRoom(user?.email!, room);
 
@@ -206,6 +185,31 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
         }
         else {
             toast('خطا هنگام پیوستن به نشست !')
+        }
+    }
+
+    const startPublish = async(localMedia: HTMLVideoElement) => {
+
+        const localStream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: true,
+        });
+
+        if (localMedia) {
+            localMedia.srcObject = localStream;
+        }
+
+        try {
+            const pTransport = await createProducerTransport(device!);
+            producerTransport.current = pTransport;
+
+            const producers = await createProducer(localStream, pTransport);
+            audioProducer.current = producers.audioProducer;
+            videoProducer.current = producers.videoProducer
+        }
+        catch (err) {
+            toast('خطا هنگام انتشار تصاویر !')
+            console.log(err)
         }
     }
 
@@ -239,6 +243,7 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
         sendMessage,
         creatRoom,
         joinRoom,
+        startPublish,
         muteAudio,
     }
     return (

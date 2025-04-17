@@ -13,7 +13,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 
 export default function Room({ loaderData }: Route.ComponentProps) {
   const { roomId } = loaderData;
-  const { joinRoom, muteAudio } = useMediaContext();
+  const { joinRoom, muteAudio, startPublish } = useMediaContext();
   const localMediaLeft = useRef<HTMLVideoElement | undefined>(undefined)
 
   if (!roomId) {
@@ -21,8 +21,13 @@ export default function Room({ loaderData }: Route.ComponentProps) {
   }
 
   const handleJoin = async () => {
+    await joinRoom(roomId);
+
+  }
+
+  const handlePublish = async() =>{
     if (localMediaLeft.current) {
-      await joinRoom(roomId, localMediaLeft.current);
+      await startPublish(localMediaLeft.current)
     }
   }
 
@@ -38,6 +43,7 @@ export default function Room({ loaderData }: Route.ComponentProps) {
             <div className="grid grid-flow-col justify-items-center">
               <div className="space-x-1">
                 <Button variant="outline" onClick={handleJoin}>پیوستن به نشست</Button>
+                <Button variant="outline" onClick={handlePublish}>ارسال تصویر</Button>
                 <Button variant="outline" onClick={handleMute}>Mute</Button>
               </div>
             </div>
