@@ -1,17 +1,19 @@
 // @ts-nocheck
 import { EventEmitter } from "node:events";
 import config from "../config.js";
-import { v5 as uuidv5 } from 'uuid';
+import { v5 as uuidv5 } from "uuid";
 
-const UUIDV5_NAMESPACE = 'af6f650e-3ced-4f80-afef-f956afe3191d';
-
-//import newDominantSpeaker from "../utilities/newDominantSpeaker.js";
+const UUIDV5_NAMESPACE = "af6f650e-3ced-4f80-afef-f956afe3191d";
 
 // Rooms are not a MediaSoup thing. MS cares about mediastreams, transports,
 // things like that. It doesn't care, or know, about rooms.
 // Rooms can be inside of clients, clients inside of rooms,
 // transports can belong to rooms or clients, etc.
 class Room extends EventEmitter {
+  /**
+   * @param {string} roomName
+   * @param {import("mediasoup/types").Worker} workerToUse
+   */
   constructor(roomName, workerToUse) {
     super();
     const roomId = uuidv5(roomName, UUIDV5_NAMESPACE);
@@ -19,11 +21,23 @@ class Room extends EventEmitter {
     this.id = roomId;
     this.roomName = roomName;
     this.worker = workerToUse;
+
+    /**
+     * @type {import("mediasoup/types").Router | null}
+     */
     this.router = null;
-    //all the Client objects that are in this room
+    /**
+     * @type {Client[]}
+     */
     this.clients = [];
-    //an array of id's with the most recent dominant speaker first
+    /**
+     * @type {string[]}
+     */
     this.activeSpeakerList = [];
+    /**
+     * @type {{ id: string; text: string; userName: string; date: string; }[]}
+     */
+
     this.messages = [];
   }
 
@@ -34,14 +48,23 @@ class Room extends EventEmitter {
     this.emit("close");
   }
 
+  /**
+   * @param {Client} client
+   */
   addClient(client) {
     this.clients.push(client);
   }
 
+  /**
+   * @param {{ id: string; text: any; userName: any; date: string; }} message
+   */
   addMessage(message) {
     this.messages.push(message);
   }
 
+  /**
+   * @param {import("socket.io").Namespace<import("socket.io").DefaultEventsMap, import("socket.io").DefaultEventsMap, import("socket.io").DefaultEventsMap, any>} io
+   */
   createRouter(io) {
     return new Promise(async (resolve, reject) => {
       this.router = await this.worker.createRouter({
@@ -58,6 +81,10 @@ class Room extends EventEmitter {
     });
   }
 
+  /**
+   * @param {{ producer: { id: string; }; }} ds
+   * @param {import("socket.io").Namespace<import("socket.io").DefaultEventsMap, import("socket.io").DefaultEventsMap, import("socket.io").DefaultEventsMap, any>} io
+   */
   newDominantSpeaker(ds, io) {
     console.log("======ds======", ds.producer.id);
     // look through this room's activeSpeakerList for this producer's pid
@@ -80,12 +107,14 @@ class Room extends EventEmitter {
     )) {
       // we have the audioPidsToCreate this socket needs to create
       // map the video pids and the username
-      const videoPidsToCreate = audioPidsToCreate.map((aPid) => {
-        const producerClient = this.clients.find(
-          (c) => c?.producer?.audio?.id === aPid
-        );
-        return producerClient?.producer?.video?.id;
-      });
+      const videoPidsToCreate = audioPidsToCreate.map(
+        (/** @type {any} */ aPid) => {
+          const producerClient = this.clients.find(
+            (c) => c?.producer?.audio?.id === aPid
+          );
+          return producerClient?.producer?.video?.id;
+        }
+      );
       const associatedUserNames = audioPidsToCreate.map((aPid) => {
         const producerClient = this.clients.find(
           (c) => c?.producer?.audio?.id === aPid
@@ -93,7 +122,7 @@ class Room extends EventEmitter {
         return producerClient?.userName;
       });
       io.to(socketId).emit("newProducersToConsume", {
-        routerRtpCapabilities: this.router.rtpCapabilities,
+        routerRtpCapabilities: this.router?.rtpCapabilities,
         audioPidsToCreate,
         videoPidsToCreate,
         associatedUserNames,
@@ -188,7 +217,7 @@ class Room extends EventEmitter {
     return { audioPidsToCreate, videoPidsToCreate, associatedUserNames };
   };
 
-  getProducingVideo = (audioPid) => {
+  getProducingVideo = (/** @type {any} */ audioPid) => {
     const producingClient = this.clients.find(
       (c) => c?.producer?.audio?.id === audioPid
     );

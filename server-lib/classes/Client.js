@@ -3,6 +3,11 @@ import { EventEmitter } from "node:events";
 import config from "../config.js";
 
 class Client extends EventEmitter {
+  /**
+   * @param {string} userName
+   * @param {import("./Room.js").default} room
+   * @param {import("socket.io").Socket<import("socket.io").DefaultEventsMap, import("socket.io").DefaultEventsMap, import("socket.io").DefaultEventsMap, any>} socket
+   */
   constructor(userName, room, socket) {
     super();
     this.userName = userName;
@@ -14,6 +19,10 @@ class Client extends EventEmitter {
     this.producer = {};
     //instead of calling this consumerTransport, call it downstream,
     // THIS client's transport for pulling data
+    /**
+     * @type {{ transport: import("mediasoup/types").WebRtcTransport<import("mediasoup/types").AppData>; //will handle both audio and video
+    associatedVideoPid: null; associatedAudioPid: null; }[]}
+     */
     this.downstreamTransports = [];
     // {
     // transport,
@@ -41,15 +50,21 @@ class Client extends EventEmitter {
     this.emit("close");
   }
 
+  /**
+   * @param {string | null} audioPid
+   */
   getDownstreamTransport(audioPid) {
     return this.downstreamTransports.find((t) => t?.associatedAudioPid === audioPid);
   }
 
+  /**
+   * @param {string} type
+   */
   addTransport(type, audioPid = null, videoPid = null) {
     return new Promise(async (resolve, reject) => {
       const { listenIps, initialAvailableOutgoingBitrate, maxIncomingBitrate } =
         config.webRtcTransport;
-      const transport = await this.room.router.createWebRtcTransport({
+      const transport = await this.room.router?.createWebRtcTransport({
         enableUdp: true,
         enableTcp: true, //always use UDP unless we can't
         preferUdp: true,

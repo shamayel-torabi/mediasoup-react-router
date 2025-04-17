@@ -45,6 +45,13 @@ const config = {
     webRtcTransport: {
       listenIps: [
         {
+          //protocol: 'udp',
+          ip: '127.0.0.1', //anywhere
+          announcedIp: null // replace by public IP address
+          // announcedIp: '76.97.119.246',
+        },
+        {
+          //protocol: 'tcp',
           ip: '127.0.0.1', //anywhere
           announcedIp: null // replace by public IP address
           // announcedIp: '76.97.119.246',

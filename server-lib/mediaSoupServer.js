@@ -1,10 +1,10 @@
+// @ts-nocheck
 import { createServer } from "node:http";
 import { Server } from "socket.io";
 import createWorkers from "./createWorkers.js";
 import getWorker from "./getWorker.js";
 import Room from "./classes/Room.js";
 import Client from "./classes/Client.js";
-import { error } from "node:console";
 
 const PORT = Number.parseInt(process.env.PORT || "3000");
 
@@ -12,7 +12,7 @@ const PORT = Number.parseInt(process.env.PORT || "3000");
 //init workers, it's where our mediasoup workers will live
 
 /**
- * @type {null}
+ * @type {import("mediasoup/types").Worker | null}
  */
 let workers = null;
 // router is now managed by the Room object
@@ -31,17 +31,14 @@ const runMediaSoupServer = async (app) => {
 
   io.on("connection", (socket) => {
     console.log(`Peer connected: ${socket.id}`);
-    /**
-     * @type {Client}
-     */
     let client; //this client object available to all our socket listeners
 
-    const currentRooms = rooms.map((room)=>{
-      return {roomId: room.id, roomName: room.roomName}
-    })
+    const currentRooms = rooms.map((room) => {
+      return { roomId: room.id, roomName: room.roomName };
+    });
     socket.emit("connectionSuccess", {
       socketId: socket.id,
-      rooms: currentRooms
+      rooms: currentRooms,
     });
 
     socket.on("disconnect", () => {
@@ -80,16 +77,6 @@ const runMediaSoupServer = async (app) => {
         roomName: requestedRoom.roomName,
       });
       ackCb({ roomId: requestedRoom.id });
-    });
-    socket.on("getRooms", async (ackCb) => {
-      const reqRooms = rooms.map((room) => {
-        return {
-          roomId: room.id,
-          roomName: room.roomName,
-        };
-      });
-
-      ackCb({ rooms: reqRooms });
     });
     socket.on("joinRoom", async ({ userName, roomId }, ackCb) => {
       let newRoom = false;
@@ -200,18 +187,22 @@ const runMediaSoupServer = async (app) => {
       )) {
         // we have the audioPidsToCreate this socket needs to create
         // map the video pids and the username
-        const videoPidsToCreate = audioPidsToCreate.map((aPid) => {
-          const producerClient = client.room.clients.find(
-            (c) => c?.producer?.audio?.id === aPid
-          );
-          return producerClient?.producer?.video?.id;
-        });
-        const associatedUserNames = audioPidsToCreate.map((aPid) => {
-          const producerClient = client.room.clients.find(
-            (c) => c?.producer?.audio?.id === aPid
-          );
-          return producerClient?.userName;
-        });
+        const videoPidsToCreate = audioPidsToCreate.map(
+          (/** @type {any} */ aPid) => {
+            const producerClient = client.room.clients.find(
+              (c) => c?.producer?.audio?.id === aPid
+            );
+            return producerClient?.producer?.video?.id;
+          }
+        );
+        const associatedUserNames = audioPidsToCreate.map(
+          (/** @type {any} */ aPid) => {
+            const producerClient = client.room.clients.find(
+              (c) => c?.producer?.audio?.id === aPid
+            );
+            return producerClient?.userName;
+          }
+        );
         io.to(socketId).emit("newProducersToConsume", {
           routerRtpCapabilities: client.room.router.rtpCapabilities,
           audioPidsToCreate,

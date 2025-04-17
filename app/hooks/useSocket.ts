@@ -34,7 +34,6 @@ interface ClientToServerEvents {
     roomName: string,
     ackCb: ({roomId}: {roomId: string}) => void
   ) => void,
-  getRooms: (ackCb: ({rooms}: {rooms: Room[]})=> void) => void
   joinRoom: (
     data: { userName: string; roomId: string },
     ackCb: ({ consumeData, newRoom, messages }: {
@@ -131,11 +130,6 @@ export const useSocket = (
   const createMediaSoupRoom = async (roomName: string) =>{
     const createRoomResp  = await socket?.emitWithAck("createRoom", roomName);
     return createRoomResp?.roomId;  
-  }
-
-  const getMediaSoupRooms = async () =>{
-    const getRoomsResp  = await socket?.emitWithAck("getRooms");
-    return getRoomsResp?.rooms;
   }
 
   const joinMediaSoupRoom = async (userName: string, roomId: string) => {
@@ -316,14 +310,9 @@ export const useSocket = (
     resolve(producerTransport);
   });
 
-  const startProduce = () => {
-
-  }
-
   return {
     socketSendMessage,
     createMediaSoupRoom,
-    getMediaSoupRooms,
     joinMediaSoupRoom,
     requestTransport,
     connectTransport,

@@ -15,7 +15,9 @@ const createWorkers = () =>
         //useful for firewall or networking rules
         rtcMinPort: config.workerSettings.rtcMinPort,
         rtcMaxPort: config.workerSettings.rtcMaxPort,
+        // @ts-ignore
         logLevel: config.workerSettings.logLevel,
+        // @ts-ignore
         logTags: config.workerSettings.logTags,
       });
       worker.on("died", () => {
