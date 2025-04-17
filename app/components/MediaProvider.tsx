@@ -7,15 +7,17 @@ import {
 } from 'react'
 
 import { Consumer, Device, Producer, Transport } from 'mediasoup-client/types';
-import { type MediaConsumer, type Message, type ConsumeData } from '~/types';
+import { type MediaConsumer, type Message, type ConsumeData, type Room } from '~/types';
 import { useUserContext } from './UserProvider';
 import { toast } from 'sonner';
 import { useSocket } from '~/hooks/useSocket';
 
 type MediaContextType = {
     messages: Message[],
+    rooms: Room[],
     consumers: Record<string, MediaConsumer>,
     listOfActives: string[],
+    creatRoom: (roomName: string) => Promise<string>
     sendMessage: (text: string) => Promise<void>,
     joinRoom: (roomId: string, localMediaLeft: HTMLVideoElement) => Promise<void>
     muteAudio: () => Promise<boolean>,
@@ -30,6 +32,7 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
     const [messages, setMessages] = useState<Message[]>([]);
     const [consumers, setConsumers] = useState<Record<string, MediaConsumer>>({});
     const [listOfActives, setListOfActives] = useState<string[]>([]);
+    const [rooms, setRooms] = useState<Room[]>([])
 
     const roomId = useRef<string>(undefined)
     const isProducer = useRef<boolean>(undefined);
@@ -41,6 +44,10 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
 
     const recievMessage = (newMessage: Message) => {
         setMessages((prev) => [...prev, newMessage]);
+    }
+
+    const newRoomCreated = (room: Room) =>{
+        setRooms((prev) => [...prev, room]);
     }
 
     const requestTransportToConsume = (consumeData: ConsumeData) => {
@@ -99,7 +106,8 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
 
     const {
         socketSendMessage,
-        socketJoinRoom,
+        createMediaSoupRoom,
+        joinMediaSoupRoom,
         requestTransport,
         createProducerTransport,
         createConsumer,
@@ -107,12 +115,13 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
         audioChange
     } = useSocket(
         recievMessage,
+        newRoomCreated,
         requestTransportToConsume,
         updateListOfActives
     );
 
     const startProducing = async () => {
-        if (consumeData.current){
+        if (consumeData.current) {
             requestTransportToConsume(consumeData.current);
             console.log('startProducing:', consumeData)
         }
@@ -180,7 +189,7 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
     const joinRoom = async (room: string, localMedia: HTMLVideoElement) => {
         localMediaLeft.current = localMedia;
 
-        const joinRoomResp = await socketJoinRoom(user?.email!, room);
+        const joinRoomResp = await joinMediaSoupRoom(user?.email!, room);
 
         if (joinRoomResp) {
             consumeData.current = joinRoomResp.consumeData;
@@ -217,11 +226,18 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
         }
     }
 
+    const creatRoom = async (roomName: string) => {
+        const r = await createMediaSoupRoom(roomName);
+        return r || '';
+    }
+
     const contextValue: MediaContextType = {
         messages,
+        rooms,
         consumers,
         listOfActives,
         sendMessage,
+        creatRoom,
         joinRoom,
         muteAudio,
     }

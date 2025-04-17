@@ -1,6 +1,9 @@
 // @ts-nocheck
 import { EventEmitter } from "node:events";
 import config from "../config.js";
+import { v5 as uuidv5 } from 'uuid';
+
+const UUIDV5_NAMESPACE = 'af6f650e-3ced-4f80-afef-f956afe3191d';
 
 //import newDominantSpeaker from "../utilities/newDominantSpeaker.js";
 
@@ -9,9 +12,12 @@ import config from "../config.js";
 // Rooms can be inside of clients, clients inside of rooms,
 // transports can belong to rooms or clients, etc.
 class Room extends EventEmitter {
-  constructor(roomId, workerToUse) {
+  constructor(roomName, workerToUse) {
     super();
+    const roomId = uuidv5(roomName, UUIDV5_NAMESPACE);
+
     this.id = roomId;
+    this.roomName = roomName;
     this.worker = workerToUse;
     this.router = null;
     //all the Client objects that are in this room

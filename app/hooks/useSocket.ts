@@ -10,11 +10,12 @@ import type {
 } from "mediasoup-client/types";
 import { useEffect, useState } from "react";
 import { io, Socket } from "socket.io-client";
-import type { Message, ConsumeData } from "~/types";
+import type { Message, ConsumeData, Room } from "~/types";
 
 interface ServerToClientEvents {
-  connectionSuccess: (data: { socketId: string }) => void;
+  connectionSuccess: (data: { socketId: string, rooms: Room[] }) => void;
   newMessage: (message: Message) => void;
+  newRoom: (room: Room) => void;
   newProducersToConsume: (consumeData: ConsumeData) => void;
   updateActiveSpeakers: (newListOfActives: string[]) => Promise<void>
 }
@@ -29,6 +30,11 @@ interface ClientToServerEvents {
     userName: string;
     roomId: string;
   }) => void;
+  createRoom: (
+    roomName: string,
+    ackCb: ({roomId}: {roomId: string}) => void
+  ) => void,
+  getRooms: (ackCb: ({rooms}: {rooms: Room[]})=> void) => void
   joinRoom: (
     data: { userName: string; roomId: string },
     ackCb: ({ consumeData, newRoom, messages }: {
@@ -76,22 +82,27 @@ interface ClientToServerEvents {
 
 export const useSocket = (
   recievMessage: (newMessage: Message) => void,
+  newRoomCreated: (newRoom: Room) => void,
   requestTransportToConsume: (consumeData: ConsumeData) => void,
   updateListOfActives: (newListOfActives: string[]) => Promise<void>,
 ) => {
-  const [socket, setSocket] =
-    useState<Socket<ServerToClientEvents, ClientToServerEvents>>();
+  const [socket, setSocket] = useState<Socket<ServerToClientEvents, ClientToServerEvents>>();
 
   useEffect(() => {
     const clientSocket: Socket<ServerToClientEvents, ClientToServerEvents> =
       io("/mediasoup");
 
-    clientSocket.on("connectionSuccess", (data) => {
-      console.log(`Connection socketId: ${data.socketId}`);
+    clientSocket.on("connectionSuccess", ({socketId, rooms}) => {
+      console.log(`Connection socketId: ${socketId}`);
+      rooms.forEach(room => newRoomCreated(room))
     });
 
     clientSocket.on("newMessage", (message) => {
       recievMessage(message);
+    });
+
+    clientSocket.on("newRoom", (room) => {
+      newRoomCreated(room);
     });
 
     clientSocket.on('newProducersToConsume', consumeData => {
@@ -117,7 +128,17 @@ export const useSocket = (
     socket?.emit("sendMessage", { text, userName, roomId });
   };
 
-  const socketJoinRoom = async (userName: string, roomId: string) => {
+  const createMediaSoupRoom = async (roomName: string) =>{
+    const createRoomResp  = await socket?.emitWithAck("createRoom", roomName);
+    return createRoomResp?.roomId;  
+  }
+
+  const getMediaSoupRooms = async () =>{
+    const getRoomsResp  = await socket?.emitWithAck("getRooms");
+    return getRoomsResp?.rooms;
+  }
+
+  const joinMediaSoupRoom = async (userName: string, roomId: string) => {
     const joinRoomResp = await socket?.emitWithAck("joinRoom", {
       userName,
       roomId,
@@ -295,9 +316,15 @@ export const useSocket = (
     resolve(producerTransport);
   });
 
+  const startProduce = () => {
+
+  }
+
   return {
     socketSendMessage,
-    socketJoinRoom,
+    createMediaSoupRoom,
+    getMediaSoupRooms,
+    joinMediaSoupRoom,
     requestTransport,
     connectTransport,
     startProducing,

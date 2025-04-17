@@ -39,3 +39,8 @@ export type RemoteVideoType = {
     mediaStream: MediaStream
 }
 
+export type Room = {
+    roomId: string,
+    roomName: string
+}
+

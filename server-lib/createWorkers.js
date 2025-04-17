@@ -1,6 +1,6 @@
 import os from "node:os"; //operating system module. part of node
 import mediasoup from "mediasoup";
-import config from "../config.js";
+import config from "./config.js";
 
 const totalThreads = os.cpus().length; //maximum number of allowed workers
 // console.log(totalThreads)
