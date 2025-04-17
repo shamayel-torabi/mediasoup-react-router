@@ -19,7 +19,7 @@ type MediaContextType = {
     listOfActives: string[],
     creatRoom: (roomName: string) => Promise<string>
     sendMessage: (text: string) => Promise<void>,
-    joinRoom: (roomId: string) => Promise<void>,
+    joinRoom: (roomId: string) => Promise<boolean>,
     startPublish: (localMediaLeft: HTMLVideoElement) => Promise<void>,
     muteAudio: () => Promise<boolean>,
 }
@@ -96,7 +96,8 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
                 setConsumers(cnsmrs);
             }
             catch (error) {
-                console.log(error)
+                console.log(error);
+                toast("requestTransportToConsume error")
             }
         });
     }
@@ -124,7 +125,6 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
     const startProducing = async () => {
         if (consumeData.current) {
             requestTransportToConsume(consumeData.current);
-            console.log('startProducing:', consumeData)
         }
     }
 
@@ -167,9 +167,7 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
     }
 
     const joinRoom = async (room: string) => {
-
         const joinRoomResp = await joinMediaSoupRoom(user?.email!, room);
-
         if (joinRoomResp) {
             consumeData.current = joinRoomResp.consumeData;
             isProducer.current = joinRoomResp.newRoom;
@@ -177,18 +175,15 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
             setMessages(joinRoomResp.messages);
 
             let d = new Device();
-            await d.load({
-                routerRtpCapabilities: joinRoomResp.consumeData.routerRtpCapabilities,
-            });
+            await d.load({ routerRtpCapabilities: joinRoomResp.consumeData.routerRtpCapabilities });
 
             setDevice(d);
+            return true;
         }
-        else {
-            toast('خطا هنگام پیوستن به نشست !')
-        }
+        return false;
     }
 
-    const startPublish = async(localMedia: HTMLVideoElement) => {
+    const startPublish = async (localMedia: HTMLVideoElement) => {
 
         const localStream = await navigator.mediaDevices.getUserMedia({
             video: true,

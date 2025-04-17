@@ -4,28 +4,34 @@ import { useMediaContext } from "~/components/MediaProvider";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import type { Route } from "./+types/_main.room.$roomId";
+import { redirect, useNavigate } from "react-router";
+import { toast } from "sonner";
 
 export async function loader({ params }: Route.LoaderArgs) {
   //const searchParams = new URL(request.url).searchParams;
   const roomId = params.roomId;
+  if (!roomId) {
+    return redirect('/')
+  }
   return { roomId }
 }
 
 export default function Room({ loaderData }: Route.ComponentProps) {
   const { roomId } = loaderData;
   const { joinRoom, muteAudio, startPublish } = useMediaContext();
-  const localMediaLeft = useRef<HTMLVideoElement | undefined>(undefined)
-
-  if (!roomId) {
-    throw new Error("نام نشست باید وجود داشته باشد")
-  }
+  const localMediaLeft = useRef<HTMLVideoElement | undefined>(undefined);
+  const navigate = useNavigate();
 
   const handleJoin = async () => {
-    await joinRoom(roomId);
+    const result = await joinRoom(roomId);
+    if (!result) {
+      navigate('/')
+    }
 
+    toast('پیوستن به نشست')
   }
 
-  const handlePublish = async() =>{
+  const handlePublish = async () => {
     if (localMediaLeft.current) {
       await startPublish(localMediaLeft.current)
     }

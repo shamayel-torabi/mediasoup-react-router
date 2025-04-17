@@ -32,7 +32,7 @@ interface ClientToServerEvents {
   }) => void;
   createRoom: (
     roomName: string,
-    ackCb: ({roomId}: {roomId: string}) => void
+    ackCb: ({ roomId }: { roomId: string }) => void
   ) => void,
   joinRoom: (
     data: { userName: string; roomId: string },
@@ -40,6 +40,7 @@ interface ClientToServerEvents {
       consumeData: ConsumeData
       newRoom: boolean;
       messages: Message[];
+      error?: string;
     }) => void
   ) => void;
   requestTransport: (
@@ -91,7 +92,7 @@ export const useSocket = (
     const clientSocket: Socket<ServerToClientEvents, ClientToServerEvents> =
       io("/mediasoup");
 
-    clientSocket.on("connectionSuccess", ({socketId, rooms}) => {
+    clientSocket.on("connectionSuccess", ({ socketId, rooms }) => {
       console.log(`Connection socketId: ${socketId}`);
       rooms.forEach(room => newRoomCreated(room))
     });
@@ -127,9 +128,9 @@ export const useSocket = (
     socket?.emit("sendMessage", { text, userName, roomId });
   };
 
-  const createMediaSoupRoom = async (roomName: string) =>{
-    const createRoomResp  = await socket?.emitWithAck("createRoom", roomName);
-    return createRoomResp?.roomId;  
+  const createMediaSoupRoom = async (roomName: string) => {
+    const createRoomResp = await socket?.emitWithAck("createRoom", roomName);
+    return createRoomResp?.roomId;
   }
 
   const joinMediaSoupRoom = async (userName: string, roomId: string) => {
@@ -137,8 +138,6 @@ export const useSocket = (
       userName,
       roomId,
     });
-
-
     return joinRoomResp;
   };
 
@@ -187,12 +186,7 @@ export const useSocket = (
     await socket?.emitWithAck("unpauseConsumer", { pid, kind });
   };
 
-  const createConsumer = (
-    consumerTransport: Transport,
-    producerId: string,
-    device: Device,
-    kind: string
-  ) => {
+  const createConsumer = (consumerTransport: Transport, producerId: string, device: Device, kind: string) => {
     return new Promise<Consumer>(async (resolve, reject) => {
       // consume from the basics, emit the consumeMedia event, we take
       // the params we get back, and run .consume(). That gives us our track
@@ -201,26 +195,30 @@ export const useSocket = (
         producerId,
         kind
       );
-      console.log("consumerParams:", consumerParams);
-      if (consumerParams?.status === "cannotConsume") {
-        console.log("Cannot consume");
-        resolve()
-        //reject(new Error("Cannot consume"));
-      } else if (consumerParams?.status === "consumeFailed") {
-        console.log("Consume failed...");
-        resolve()
-        //reject(new Error("Consume failed..."));
-      } else {
-        // we got valid params! Use them to consume
-        const consumer = await consumerTransport.consume(
-          consumerParams?.consumerOptions!
-        );
-        console.log("consume() has finished");
-        //const { track } = consumer;
-        // add track events
-        //unpause
-        await unpauseConsumer(producerId, kind);
-        resolve(consumer);
+
+      if (consumerParams) {
+        //console.log("consumerParams:", consumerParams);
+        if (consumerParams?.status === "cannotConsume") {
+          console.log("Cannot consume");
+          reject(new Error("Cannot consume"));
+        } else if (consumerParams?.status === "consumeFailed") {
+          console.log("Consume failed...");
+          reject(new Error("Consume failed..."));
+        } else {
+          // we got valid params! Use them to consume
+          const consumer = await consumerTransport.consume(
+            consumerParams.consumerOptions
+          );
+          console.log("consume() has finished");
+          //const { track } = consumer;
+          // add track events
+          //unpause
+          await unpauseConsumer(producerId, kind);
+          resolve(consumer);
+        }
+      }
+      else {
+        reject(new Error("consumerParams is null"))
       }
     });
   };

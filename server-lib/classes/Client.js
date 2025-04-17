@@ -40,12 +40,12 @@ class Client extends EventEmitter {
   }
 
   close() {
-    if (this.upstreamTransport) {
-      this.upstreamTransport.close();
-      this.downstreamTransports.forEach((downstreamTransport) =>
-        downstreamTransport.transport.close()
-      );
-    }
+    // if (this.upstreamTransport) {
+    //   this.upstreamTransport.close();
+    //   this.downstreamTransports.forEach((downstreamTransport) =>
+    //     downstreamTransport.transport.close()
+    //   );
+    // }
 
     this.emit("close");
   }

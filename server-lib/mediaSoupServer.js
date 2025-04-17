@@ -145,11 +145,12 @@ const runMediaSoupServer = async (app) => {
         } else if (type === "consumer") {
           // find the right transport, for this consumer
           try {
-            const downstreamTransport = client.downstreamTransports.find(
-              (t) => {
-                return t.associatedAudioPid === audioPid;
-              }
-            );
+            const downstreamTransport = client.getDownstreamTransport(audioPid);
+            // const downstreamTransport = client.downstreamTransports.find(
+            //   (t) => {
+            //     return t.associatedAudioPid === audioPid;
+            //   }
+            // );
             downstreamTransport.transport.connect({ dtlsParameters });
             ackCb({ status: "success" });
           } catch (error) {
@@ -240,22 +241,22 @@ const runMediaSoupServer = async (app) => {
             if (downstreamTransport) {
               // create the consumer with the transport
               const newConsumer = await downstreamTransport.transport.consume({
-                producerId: producerId,
+                producerId,
                 rtpCapabilities,
                 paused: true, //good practice
               });
 
-              console.log("consumeMedia newConsumer:", newConsumer);
+              //console.log("consumeMedia newConsumer:", newConsumer);
               // add this newCOnsumer to the CLient
               client.addConsumer(kind, newConsumer, downstreamTransport);
               // respond with the params
-              const clientParams = {
-                producerId,
+              const consumerOptions = {
                 id: newConsumer.id,
+                producerId,
                 kind: newConsumer.kind,
                 rtpParameters: newConsumer.rtpParameters,
               };
-              ackCb({ clientParams });
+              ackCb({ consumerOptions });
             } else {
               ackCb({ status: "downstreamTransport is null" });
             }
@@ -275,7 +276,7 @@ const runMediaSoupServer = async (app) => {
     });
     socket.on("unpauseConsumer", async ({ pid, kind }, ackCb) => {
       const consumerToResume = client.downstreamTransports.find((t) => {
-        return t?.[kind].producerId === pid;
+        return t[kind].producerId === pid;
       });
       await consumerToResume[kind].resume();
       ackCb();

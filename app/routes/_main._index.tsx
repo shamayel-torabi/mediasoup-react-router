@@ -10,7 +10,6 @@ import {
 } from "~/components/ui/card";
 import { Label } from "~/components/ui/label";
 import { Input } from "~/components/ui/input";
-import { v5 as uuidv5 } from 'uuid';
 import { Errors } from "~/components/Errors";
 import { useMediaContext } from "~/components/MediaProvider";
 import React from "react";
@@ -48,7 +47,6 @@ export default function Home({ actionData }: Route.ComponentProps) {
     const roomName = formData.get("room") as string;
     if (roomName) {
       const rommId = await creatRoom(roomName);
-      console.log('rommId:', rommId)
     }
   }
   return (
@@ -58,13 +56,13 @@ export default function Home({ actionData }: Route.ComponentProps) {
           <CardTitle>ورود به نشست</CardTitle>
         </CardHeader>
         <CardContent className="grid">
-          <p>فهرست نشست ها</p>
+          <p className=" text-lg text-gray-950 dark:text-gray-50">فهرست نشست ها</p>
           <div>
             <ul>
               {
                 rooms.map((room) => (
-                  <li key={room.roomId}>
-                    <Link to={`/room/${room.roomId}`}>
+                  <li key={room.roomId} className="my-2">
+                    <Link to={`/room/${room.roomId}`} className="text-md text-gray-950 dark:text-gray-50 hover:text-blue-600">
                       {room.roomName}
                     </Link>
                   </li>))
