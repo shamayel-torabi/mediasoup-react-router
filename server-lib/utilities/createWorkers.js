@@ -29,4 +29,4 @@ const createWorkers = () =>
     resolve(workers);
   });
 
-  export default createWorkers;
+export default createWorkers;

@@ -4,7 +4,7 @@ import config from "../config.js";
 
 class Client extends EventEmitter {
   constructor(userName, room, socket) {
-    super()
+    super();
     this.userName = userName;
     this.socket = socket;
     //instead of calling this producerTransport, call it upstream, THIS client's transport
@@ -38,7 +38,11 @@ class Client extends EventEmitter {
       );
     }
 
-    this.emit('close')
+    this.emit("close");
+  }
+
+  getDownstreamTransport(audioPid) {
+    return this.downstreamTransports.find((t) => t?.associatedAudioPid === audioPid);
   }
 
   addTransport(type, audioPid = null, videoPid = null) {
@@ -101,6 +105,7 @@ class Client extends EventEmitter {
       this.room.activeSpeakerObserver.addProducer({
         producerId: newProducer.id,
       });
+      this.room.activeSpeakerList.push(newProducer.id);
     }
   }
   addConsumer(kind, newConsumer, downstreamTransport) {

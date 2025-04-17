@@ -10,24 +10,13 @@ import type {
 } from "mediasoup-client/types";
 import { useEffect, useState } from "react";
 import { io, Socket } from "socket.io-client";
-import type { MediaConsumer, Message } from "~/types";
+import type { Message, ConsumeData } from "~/types";
 
 interface ServerToClientEvents {
   connectionSuccess: (data: { socketId: string }) => void;
   newMessage: (message: Message) => void;
-  newProducersToConsume: ({
-    routerRtpCapabilities,
-    audioPidsToCreate,
-    videoPidsToCreate,
-    associatedUserNames,
-    activeSpeakerList,
-  }: {
-    routerRtpCapabilities: RtpCapabilities;
-    audioPidsToCreate: string[];
-    videoPidsToCreate: string[];
-    associatedUserNames: string[];
-    activeSpeakerList: string[];
-  }) => void;
+  newProducersToConsume: (consumeData: ConsumeData) => void;
+  updateActiveSpeakers: (newListOfActives: string[]) => Promise<void>
 }
 
 interface ClientToServerEvents {
@@ -42,20 +31,10 @@ interface ClientToServerEvents {
   }) => void;
   joinRoom: (
     data: { userName: string; roomId: string },
-    ackCb: ({
-      routerRtpCapabilities,
-      newRoom,
-      messages,
-      audioPidsToCreate,
-      videoPidsToCreate,
-      associatedUserNames,
-    }: {
-      routerRtpCapabilities: RtpCapabilities;
+    ackCb: ({ consumeData, newRoom, messages }: {
+      consumeData: ConsumeData
       newRoom: boolean;
       messages: Message[];
-      audioPidsToCreate: string[];
-      videoPidsToCreate: string[];
-      associatedUserNames: string[];
     }) => void
   ) => void;
   requestTransport: (
@@ -78,9 +57,9 @@ interface ClientToServerEvents {
   consumeMedia: (
     {
       rtpCapabilities,
-      pid,
+      producerId,
       kind,
-    }: { rtpCapabilities: RtpCapabilities; pid: string; kind: string },
+    }: { rtpCapabilities: RtpCapabilities; producerId: string; kind: string },
     ackCb: ({
       consumerOptions,
       status,
@@ -95,23 +74,35 @@ interface ClientToServerEvents {
   ) => void;
 }
 
-export const useSocket = () => {
+export const useSocket = (
+  recievMessage: (newMessage: Message) => void,
+  requestTransportToConsume: (consumeData: ConsumeData) => void,
+  updateListOfActives: (newListOfActives: string[]) => Promise<void>,
+) => {
   const [socket, setSocket] =
     useState<Socket<ServerToClientEvents, ClientToServerEvents>>();
-  const [messages, setMessages] = useState<Message[]>([]);
 
   useEffect(() => {
     const clientSocket: Socket<ServerToClientEvents, ClientToServerEvents> =
       io("/mediasoup");
 
-    setSocket(clientSocket);
     clientSocket.on("connectionSuccess", (data) => {
-      console.log(`socket connection Id: ${data.socketId}`);
+      console.log(`Connection socketId: ${data.socketId}`);
     });
 
     clientSocket.on("newMessage", (message) => {
-      setMessages((prev) => [...prev, message]);
+      recievMessage(message);
     });
+
+    clientSocket.on('newProducersToConsume', consumeData => {
+      requestTransportToConsume(consumeData)
+    });
+
+    clientSocket.on('updateActiveSpeakers', async newListOfActives => {
+      await updateListOfActives(newListOfActives)
+    })
+
+    setSocket(clientSocket);
 
     return () => {
       clientSocket.disconnect();
@@ -126,15 +117,12 @@ export const useSocket = () => {
     socket?.emit("sendMessage", { text, userName, roomId });
   };
 
-  const join = async (userName: string, roomId: string) => {
+  const socketJoinRoom = async (userName: string, roomId: string) => {
     const joinRoomResp = await socket?.emitWithAck("joinRoom", {
       userName,
       roomId,
     });
 
-    if (joinRoomResp?.messages) {
-      setMessages(joinRoomResp.messages);
-    }
 
     return joinRoomResp;
   };
@@ -170,14 +158,10 @@ export const useSocket = () => {
     socket?.emit("audioChange", typeOfChange);
   };
 
-  const consumeMedia = async (
-    rtpCapabilities: RtpCapabilities,
-    pid: string,
-    kind: string
-  ) => {
+  const consumeMedia = async (rtpCapabilities: RtpCapabilities, producerId: string, kind: string) => {
     const consumerParams = await socket?.emitWithAck("consumeMedia", {
       rtpCapabilities,
-      pid,
+      producerId,
       kind,
     });
 
@@ -190,35 +174,37 @@ export const useSocket = () => {
 
   const createConsumer = (
     consumerTransport: Transport,
-    pid: string,
+    producerId: string,
     device: Device,
     kind: string
   ) => {
-    return new Promise<Consumer | void>(async (resolve, reject) => {
+    return new Promise<Consumer>(async (resolve, reject) => {
       // consume from the basics, emit the consumeMedia event, we take
       // the params we get back, and run .consume(). That gives us our track
       const consumerParams = await consumeMedia(
         device.rtpCapabilities,
-        pid,
+        producerId,
         kind
       );
       console.log("consumerParams:", consumerParams);
       if (consumerParams?.status === "cannotConsume") {
         console.log("Cannot consume");
-        resolve();
+        resolve()
+        //reject(new Error("Cannot consume"));
       } else if (consumerParams?.status === "consumeFailed") {
         console.log("Consume failed...");
-        resolve();
+        resolve()
+        //reject(new Error("Consume failed..."));
       } else {
         // we got valid params! Use them to consume
         const consumer = await consumerTransport.consume(
           consumerParams?.consumerOptions!
         );
         console.log("consume() has finished");
-        const { track } = consumer;
+        //const { track } = consumer;
         // add track events
         //unpause
-        await unpauseConsumer(pid, kind);
+        await unpauseConsumer(producerId, kind);
         resolve(consumer);
       }
     });
@@ -261,62 +247,6 @@ export const useSocket = () => {
       }
     );
     return consumerTransport;
-  };
-
-  const requestTransportToConsume = (
-    consumeData: {
-      audioPidsToCreate: string[];
-      videoPidsToCreate: string[];
-      associatedUserNames: string[];
-    },
-    device: Device
-  ) => {
-    let consumers: Record<string, MediaConsumer> = {};
-
-    consumeData.audioPidsToCreate.forEach(async (audioPid, i) => {
-      const videoPid = consumeData.videoPidsToCreate[i];
-      // expecting back transport params for THIS audioPid. Maybe 5 times, maybe 0
-      const consumerTransportParams = await requestTransport(
-        "consumer",
-        audioPid
-      );
-
-      //console.log(consumerTransportParams);
-
-      const consumerTransport = createConsumerTransport(
-        consumerTransportParams!,
-        device,
-        audioPid
-      );
-
-      const [audioConsumer, videoConsumer] = await Promise.all([
-        createConsumer(consumerTransport, audioPid, device, "audio"),
-        createConsumer(consumerTransport, videoPid, device, "video"),
-      ]);
-      console.log(audioConsumer);
-      console.log(videoConsumer);
-      // create a new MediaStream on the client with both tracks
-      // This is why we have gone through all this pain!!!
-      const combinedStream = new MediaStream([
-        audioConsumer?.track!,
-        videoConsumer?.track!,
-      ]);
-      const remoteVideo = document.getElementById(
-        `remote-video-${i}`
-      ) as HTMLVideoElement;
-      remoteVideo.srcObject = combinedStream;
-      console.log("Hope this works...");
-
-      consumers[audioPid] = {
-        combinedStream,
-        userName: consumeData.associatedUserNames[i],
-        consumerTransport,
-        audioConsumer: audioConsumer as Consumer,
-        videoConsumer: videoConsumer as Consumer,
-      };
-    });
-
-    return consumers;
   };
 
   const createProducerTransport = (device: Device) => new Promise<Transport>(async (resolve, reject) => {
@@ -366,18 +296,16 @@ export const useSocket = () => {
   });
 
   return {
-    messages,
     socketSendMessage,
-    join,
+    socketJoinRoom,
     requestTransport,
     connectTransport,
     startProducing,
     audioChange,
     consumeMedia,
-    createConsumer,
     unpauseConsumer,
+    createConsumer,
     createConsumerTransport,
-    requestTransportToConsume,
     createProducerTransport
   };
 };

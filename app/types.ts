@@ -1,4 +1,4 @@
-import type { Consumer, Transport } from "mediasoup-client/types"
+import type { Consumer, RtpCapabilities, Transport } from "mediasoup-client/types"
 
 export type Message = {
     id: string
@@ -24,5 +24,18 @@ export type MediaConsumer = {
     consumerTransport: Transport;
     audioConsumer: Consumer,
     videoConsumer: Consumer
+}
+
+export type ConsumeData = {
+    routerRtpCapabilities: RtpCapabilities;
+    audioPidsToCreate: string[];
+    videoPidsToCreate: string[];
+    associatedUserNames: string[];
+    activeSpeakerList: string[];
+}
+
+export type RemoteVideoType = {
+    id: number,
+    mediaStream: MediaStream
 }
 

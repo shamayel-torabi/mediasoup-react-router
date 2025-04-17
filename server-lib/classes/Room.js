@@ -113,13 +113,11 @@ class Room extends EventEmitter {
         // pid is the producer id we want to mute
         if (client?.producer?.audio?.id === pid) {
           // this client is the produer. Mute the producer
-          client?.producer?.audio.pause();
-          client?.producer?.video.pause();
+          client?.producer?.audio?.pause();
+          client?.producer?.video?.pause();
           return;
         }
-        const downstreamToStop = client.downstreamTransports.find(
-          (t) => t?.audio?.producerId === pid
-        );
+        const downstreamToStop = client.getDownstreamTransport(pid);
         if (downstreamToStop) {
           // found the audio, mute both
           downstreamToStop.audio.pause();
@@ -131,18 +129,16 @@ class Room extends EventEmitter {
       activeSpeakers.forEach((pid) => {
         if (client?.producer?.audio?.id === pid) {
           // this client is the produer. Resume the producer
-          client?.producer?.audio.resume();
-          client?.producer?.video.resume();
+          client?.producer?.audio?.resume();
+          client?.producer?.video?.resume();
           return;
         }
         // can grab pid from the audio.producerId like above, or use our own associatedAudioPid
-        const downstreamToStart = client.downstreamTransports.find(
-          (t) => t?.associatedAudioPid === pid
-        );
+        const downstreamToStart = client.getDownstreamTransport(pid);
         if (downstreamToStart) {
           // we have a match. Just resume
-          downstreamToStart?.audio.resume();
-          downstreamToStart?.video.resume();
+          downstreamToStart?.audio?.resume();
+          downstreamToStart?.video?.resume();
         } else {
           // this client is not consuming... start the process
           newSpeakersToThisClient.push(pid);
@@ -184,16 +180,16 @@ class Room extends EventEmitter {
     });
 
     return { audioPidsToCreate, videoPidsToCreate, associatedUserNames };
-  }
+  };
 
-  getProducingVideo = (audioPid) =>{
+  getProducingVideo = (audioPid) => {
     const producingClient = this.clients.find(
       (c) => c?.producer?.audio?.id === audioPid
     );
     const videoPid = producingClient?.producer?.video?.id;
 
     return videoPid;
-  }
+  };
 }
 
 export default Room;
