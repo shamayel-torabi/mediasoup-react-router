@@ -1,9 +1,6 @@
 // @ts-nocheck
 import { EventEmitter } from "node:events";
 import config from "../config.js";
-import { v5 as uuidv5 } from "uuid";
-
-const UUIDV5_NAMESPACE = "af6f650e-3ced-4f80-afef-f956afe3191d";
 
 // Rooms are not a MediaSoup thing. MS cares about mediastreams, transports,
 // things like that. It doesn't care, or know, about rooms.
@@ -12,15 +9,15 @@ const UUIDV5_NAMESPACE = "af6f650e-3ced-4f80-afef-f956afe3191d";
 class Room extends EventEmitter {
   /**
    * @param {string} roomName
+   * @param {string} roomId
    * @param {import("mediasoup/types").Worker} workerToUse
    */
-  constructor(roomName, workerToUse) {
+  constructor(roomName, roomId, workerToUse, io) {
     super();
-    const roomId = uuidv5(roomName, UUIDV5_NAMESPACE);
-
     this.id = roomId;
     this.roomName = roomName;
     this.worker = workerToUse;
+    this.io = io;
 
     /**
      * @type {import("mediasoup/types").Router | null}
@@ -37,7 +34,6 @@ class Room extends EventEmitter {
     /**
      * @type {{ id: string; text: string; userName: string; date: string; }[]}
      */
-
     this.messages = [];
   }
 
@@ -62,10 +58,7 @@ class Room extends EventEmitter {
     this.messages.push(message);
   }
 
-  /**
-   * @param {import("socket.io").Namespace<import("socket.io").DefaultEventsMap, import("socket.io").DefaultEventsMap, import("socket.io").DefaultEventsMap, any>} io
-   */
-  createRouter(io) {
+  createRouter() {
     return new Promise(async (resolve, reject) => {
       this.router = await this.worker.createRouter({
         mediaCodecs: config.routerMediaCodecs,
@@ -75,17 +68,13 @@ class Room extends EventEmitter {
           interval: 300, //300 is default
         });
       this.activeSpeakerObserver.on("dominantspeaker", (ds) =>
-        this.newDominantSpeaker(ds, io)
+        this.newDominantSpeaker(ds)
       );
       resolve();
     });
   }
 
-  /**
-   * @param {{ producer: { id: string; }; }} ds
-   * @param {import("socket.io").Namespace<import("socket.io").DefaultEventsMap, import("socket.io").DefaultEventsMap, import("socket.io").DefaultEventsMap, any>} io
-   */
-  newDominantSpeaker(ds, io) {
+  newDominantSpeaker(ds) {
     console.log("======ds======", ds.producer.id);
     // look through this room's activeSpeakerList for this producer's pid
     // we KNOW that it is an audio pid
@@ -98,10 +87,10 @@ class Room extends EventEmitter {
       // this is a new producer, just add to the front
       this.activeSpeakerList.unshift(ds.producer.id);
     }
-    console.log(this.activeSpeakerList);
+
     // PLACEHOLDER - the activeSpeakerlist has changed!
     // updateActiveSpeakers = mute/unmute/get new transports
-    const newTransportsByPeer = this.updateActiveSpeakers(io);
+    const newTransportsByPeer = this.updateActiveSpeakers();
     for (const [socketId, audioPidsToCreate] of Object.entries(
       newTransportsByPeer
     )) {
@@ -121,7 +110,7 @@ class Room extends EventEmitter {
         );
         return producerClient?.userName;
       });
-      io.to(socketId).emit("newProducersToConsume", {
+      this.io.to(socketId).emit("newProducersToConsume", {
         routerRtpCapabilities: this.router?.rtpCapabilities,
         audioPidsToCreate,
         videoPidsToCreate,
@@ -131,7 +120,7 @@ class Room extends EventEmitter {
     }
   }
 
-  updateActiveSpeakers = (io) => {
+  updateActiveSpeakers = () => {
     //this function is called on newDominantSpeaker, or a new peer produces
     // mutes existing consumers/producer if below 5, for all peers in room
     // unmutes existing consumers/producer if in top 5, for all peers in room
@@ -190,7 +179,7 @@ class Room extends EventEmitter {
     // based on the new activeSpeakerList. Now, send out the consumers that
     // need to be made.
     // Broadcast to this room
-    io.to(this.id).emit("updateActiveSpeakers", activeSpeakers);
+    this.io.to(this.id).emit("updateActiveSpeakers", activeSpeakers);
     return newTransportsByPeer;
   };
 
@@ -214,7 +203,9 @@ class Room extends EventEmitter {
       return producingClient?.userName;
     });
 
-    return { audioPidsToCreate, videoPidsToCreate, associatedUserNames };
+    const activeSpeakerList = this.activeSpeakerList.slice(0, 5);
+
+    return { audioPidsToCreate, videoPidsToCreate, associatedUserNames, activeSpeakerList };
   };
 
   getProducingVideo = (/** @type {any} */ audioPid) => {

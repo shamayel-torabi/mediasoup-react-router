@@ -12,7 +12,7 @@ import { Label } from "~/components/ui/label";
 import { Input } from "~/components/ui/input";
 import { Errors } from "~/components/Errors";
 import { useMediaContext } from "~/components/MediaProvider";
-import React from "react";
+import React, { useState } from "react";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "~/components/ui/dialog";
 import { DialogTrigger } from "@radix-ui/react-dialog";
 
@@ -40,6 +40,7 @@ export function meta({ }: Route.MetaArgs) {
 
 export default function Home({ actionData }: Route.ComponentProps) {
   const { creatRoom, rooms } = useMediaContext();
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -84,11 +85,8 @@ export default function Home({ actionData }: Route.ComponentProps) {
                   <div className="mb-3 grid w-full items-center gap-2">
                     <Label htmlFor="room">نام نشست</Label>
                     <Input type="text" name="room" id="room" placeholder="نام نشست را وارد کنید" />
-                    <Errors errors={[actionData?.error!]} />
+                    <Errors errors={[error!]} />
                   </div>
-                  {/* <div className="flex justify-end">
-                    <Button variant="outline" type="submit">ایجاد</Button>
-                  </div> */}
                   <DialogFooter className="justify-end">
                     <DialogClose asChild>
                       <Button type="submit" variant="outline">
