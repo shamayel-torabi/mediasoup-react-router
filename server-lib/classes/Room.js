@@ -205,7 +205,12 @@ class Room extends EventEmitter {
 
     const activeSpeakerList = this.activeSpeakerList.slice(0, 5);
 
-    return { audioPidsToCreate, videoPidsToCreate, associatedUserNames, activeSpeakerList };
+    return {
+      audioPidsToCreate,
+      videoPidsToCreate,
+      associatedUserNames,
+      activeSpeakerList,
+    };
   };
 
   getProducingVideo = (/** @type {any} */ audioPid) => {

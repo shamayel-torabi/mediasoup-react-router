@@ -60,12 +60,14 @@ export const useMediasoup = () => {
   const [socket, setSocket] = useState<Socket<ServerToClientEvents, ClientToServerEvents>>();
 
   const [messages, setMessages] = useState<Message[]>([]);
-  const [consumers, setConsumers] = useState<Record<string, MediaConsumer>>({});
-  const [listOfActives, setListOfActives] = useState<string[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
+  const [listOfActives, setListOfActives] = useState<string[]>([]);
+
   //const [remoteStreams, setRemoteStreams] = useState<MediaStream[]>([]);
+  //const [consumers, setConsumers] = useState<Record<string, MediaConsumer>>({});
 
   const device = useRef<Device>(null);
+  const consumers = useRef<Record<string, MediaConsumer>>({});
   const producerTransport = useRef<Transport>(null);
   const audioProducer = useRef<Producer>(null);
   const videoProducer = useRef<Producer>(null);
@@ -102,11 +104,7 @@ export const useMediasoup = () => {
     };
   }, []);
 
-  const socketSendMessage = async (
-    text: string,
-    userName: string,
-    roomId: string
-  ) => {
+  const socketSendMessage = async (text: string, userName: string, roomId: string) => {
     socket?.emit("sendMessage", { text, userName, roomId });
   };
 
@@ -280,7 +278,6 @@ export const useMediasoup = () => {
   });
 
   const requestTransportToConsume = (consumeData: ConsumeData) => {
-    let cnsmrs: Record<string, MediaConsumer> = {};
 
     consumeData.audioPidsToCreate.forEach(async (audioPid, i) => {
       const videoPid = consumeData.videoPidsToCreate[i];
@@ -299,8 +296,8 @@ export const useMediasoup = () => {
           createConsumer(consumerTransport, audioPid, "audio"),
           createConsumer(consumerTransport, videoPid, "video"),
         ]);
-        console.log(audioConsumer);
-        console.log(videoConsumer);
+        //console.log(audioConsumer);
+        //console.log(videoConsumer);
         // create a new MediaStream on the client with both tracks
         // This is why we have gone through all this pain!!!
         const combinedStream = new MediaStream([
@@ -315,7 +312,7 @@ export const useMediasoup = () => {
 
         console.log("Hope this works...");
 
-        cnsmrs[audioPid] = {
+        consumers.current[audioPid] = {
           combinedStream,
           userName: consumeData.associatedUserNames[i],
           consumerTransport,
@@ -328,9 +325,9 @@ export const useMediasoup = () => {
       }
     });
 
-    console.log('Consumers:', cnsmrs)
+    //console.log('Consumers:', cnsmrs)
 
-    setConsumers(cnsmrs);
+    //setConsumers(cnsmrs);
   }
 
   const createProducer = (localStream: MediaStream, producerTransport: Transport) => {
