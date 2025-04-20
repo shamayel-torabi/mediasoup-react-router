@@ -298,12 +298,12 @@ const runMediaSoupServer = async (app) => {
         client?.producer?.audio?.resume();
       }
     });
-    socket.on("unpauseConsumer", async ({ producerId, kind }, ackCb) => {
+    socket.on("unpauseConsumer", async ({ pid, kind }, ackCb) => {
       // const consumerToResume = client.downstreamTransports.find((t) => {
       //   return t[kind].producerId === pid;
       // });
       try {
-        const consumerToResume = client.getDownstreamConsumer(producerId, kind);
+        const consumerToResume = client.getDownstreamConsumer(pid, kind);
         await consumerToResume[kind]?.resume();
         ackCb({ status: "success" });
       } catch (error) {
