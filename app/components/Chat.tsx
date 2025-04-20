@@ -12,7 +12,7 @@ const ChatMessage = React.memo(({ message }: { message: Message }) => {
         <li>
             <div className="flex items-start gap-2.5 mb-2">
                 <img className="w-8 h-8 rounded-full" src="/images/people/sham.jpg" alt="Jese image" />
-                <div className="flex flex-col w-[12rem] leading-1.5 p-4 border-gray-200 bg-gray-100 rounded-e-xl rounded-es-xl dark:bg-gray-700">
+                <div className="flex flex-col w-[16rem] leading-1.5 p-4 border-gray-200 bg-gray-100 rounded-e-xl rounded-es-xl dark:bg-gray-700">
                     <div className="flex items-center justify-between space-x-2 rtl:space-x-reverse">
                         <span className="text-sm font-semibold text-gray-900 dark:text-white">{message.userName}</span>
                         <span className="text-sm font-normal text-gray-500 dark:text-gray-400">{timeStr}</span>
@@ -45,7 +45,7 @@ function Chat() {
     })
 
     return (
-        <div className="grid mt-2 mx-2 bg-card text-card-foreground rounded-xl border shadow-sm">
+        <div className="grid grid-rows-[1fr_3rem] mt-2 mx-2 bg-card text-card-foreground rounded-xl border shadow-sm">
             <div className="h-(--message--page--height) overflow-y-auto rounded-sm border shadow-sm mt-2 mx-2 p-2">
                 <ul className="h-full ">
                     {mm.map((m) => <ChatMessage message={m} key={m.id} />)}

@@ -1,12 +1,15 @@
 // @ts-nocheck
 import { createServer } from "node:http";
 import { Server } from "socket.io";
+import { v5 as uuidv5 } from "uuid";
+
 import createWorkers from "./createWorkers.js";
 import getWorker from "./getWorker.js";
 import Room from "./classes/Room.js";
 import Client from "./classes/Client.js";
 
 const PORT = Number.parseInt(process.env.PORT || "3000");
+const UUIDV5_NAMESPACE = "af6f650e-3ced-4f80-afef-f956afe3191d";
 
 //our globals
 //init workers, it's where our mediasoup workers will live
@@ -18,9 +21,9 @@ let workers = null;
 // router is now managed by the Room object
 // master rooms array that contains all our Room object
 /**
- * @type {Room[]}
+ * @type {Map}
  */
-const rooms = [];
+const rooms = new Map();
 
 const runMediaSoupServer = async (app) => {
   workers = await createWorkers();
@@ -33,14 +36,15 @@ const runMediaSoupServer = async (app) => {
     console.log(`Peer connected: ${socket.id}`);
     let client; //this client object available to all our socket listeners
 
-    const currentRooms = rooms.map((room) => {
-      return { roomId: room.id, roomName: room.roomName };
+    const currentRooms = [];
+    rooms.forEach((room, key) => {
+      currentRooms.push({ roomId: key, roomName: room.roomName });
     });
+
     socket.emit("connectionSuccess", {
       socketId: socket.id,
       rooms: currentRooms,
     });
-
     socket.on("disconnect", () => {
       console.log(`Peer disconnected ${socket.id}`);
       if (client) {
@@ -48,7 +52,7 @@ const runMediaSoupServer = async (app) => {
       }
     });
     socket.on("sendMessage", ({ text, userName, roomId }) => {
-      const requestedRoom = rooms.find((room) => room.id === roomId);
+      const requestedRoom = rooms.get(roomId);
 
       if (requestedRoom) {
         const message = {
@@ -61,53 +65,73 @@ const runMediaSoupServer = async (app) => {
         requestedRoom.addMessage(message);
         io.to(requestedRoom.id).emit("newMessage", message);
       } else {
-        console.log(`room with Id:${roomId} not found`);
+        console.log(`Room with Id:${roomId} not found`);
       }
     });
     socket.on("createRoom", async (roomName, ackCb) => {
-      const workerToUse = await getWorker(workers);
-      const requestedRoom = new Room(roomName, workerToUse);
-      requestedRoom.on("close", () => {
-        console.log("Room closed");
-      });
-      await requestedRoom.createRouter(io);
-      rooms.push(requestedRoom);
-      io.emit("newRoom", {
-        roomId: requestedRoom.id,
-        roomName: requestedRoom.roomName,
-      });
-      ackCb({ roomId: requestedRoom.id });
+      try{
+        const roomId = uuidv5(roomName, UUIDV5_NAMESPACE);
+        let requestedRoom = rooms.get(roomId);
+  
+        if (!requestedRoom) {
+          const workerToUse = await getWorker(workers);
+          requestedRoom = new Room(roomName, roomId, workerToUse, io);
+          requestedRoom.on("close", () => {
+            console.log("Room closed");
+          });
+  
+          await requestedRoom.createRouter();
+          rooms.set(requestedRoom.id, requestedRoom);
+  
+          io.emit("newRoom", {
+            roomId: requestedRoom.id,
+            roomName: requestedRoom.roomName,
+          });
+        }
+  
+        ackCb({ roomId: requestedRoom.id, roomName: requestedRoom.roomName }); 
+      }catch(error){
+        console.log(error)
+      }
     });
     socket.on("joinRoom", async ({ userName, roomId }, ackCb) => {
-      let newRoom = false;
-      /**
-       * @type {Room | undefined}
-       */
-      const requestedRoom = rooms.find((room) => room.id === roomId);
+      try{
+        const requestedRoom = rooms.get(roomId);
+ 
+        if (requestedRoom) {
+          const newRoom = requestedRoom.clients.length === 0;
 
-      if (requestedRoom) {
-        client = new Client(userName, requestedRoom, socket);
-        client.on("close", () => {
-          console.log(`client ${client.userName} closed`);
-        });
-
-        socket.join(client.room.id);
-
-        const { audioPidsToCreate, videoPidsToCreate, associatedUserNames } =
-          client.room.pidsToCreate();
-
-        ackCb({
-          consumeData: {
-            routerRtpCapabilities: client.room.router.rtpCapabilities,
+          client = new Client(userName, requestedRoom, socket);
+          client.on("close", () => {
+            console.log(`client ${client.userName} closed`);
+          });
+  
+          socket.join(client.room.id);
+  
+          const {
             audioPidsToCreate,
             videoPidsToCreate,
             associatedUserNames,
-            activeSpeakerList: client.room.activeSpeakerList.slice(0, 5),
-          },
-          newRoom,
-          messages: client.room.messages,
-        });
-      } else {
+            activeSpeakerList,
+          } = client.room.pidsToCreate();
+  
+          ackCb({
+            consumeData: {
+              routerRtpCapabilities: client.room.router.rtpCapabilities,
+              audioPidsToCreate,
+              videoPidsToCreate,
+              associatedUserNames,
+              activeSpeakerList,
+            },
+            newRoom,
+            messages: client.room.messages,
+          });
+        } else {
+          console.log(`Room with Id ${roomId} does not exist`)
+          ackCb({ error: `Room with Id ${roomId} does not exist` });
+        } 
+      }catch(error){
+        console.log(error);
         ackCb({ error: `Room with Id ${roomId} does not exist` });
       }
     });
@@ -180,7 +204,7 @@ const runMediaSoupServer = async (app) => {
       }
 
       // run updateActiveSpeakers
-      const newTransportsByPeer = client.room.updateActiveSpeakers(io);
+      const newTransportsByPeer = client.room.updateActiveSpeakers();
       // newTransportsByPeer is an object, each property is a socket.id that
       // has transports to make. They are in an array, by pid
       for (const [socketId, audioPidsToCreate] of Object.entries(
@@ -217,7 +241,7 @@ const runMediaSoupServer = async (app) => {
       "consumeMedia",
       async ({ rtpCapabilities, producerId, kind }, ackCb) => {
         // will run twice for every peer to consume... once for video, once for audio
-        console.log("consumeMedia Kind: ", kind, "   producerId:", producerId);
+        // console.log("consumeMedia Kind: ", kind, "   producerId:", producerId);
         // we will set up our clientConsumer, and send back the params
         // use the right transport and add/update the consumer in Client
         // confirm canConsume
@@ -274,15 +298,15 @@ const runMediaSoupServer = async (app) => {
         client?.producer?.audio?.resume();
       }
     });
-    socket.on("unpauseConsumer", async ({ pid, kind }, ackCb) => {
+    socket.on("unpauseConsumer", async ({ producerId, kind }, ackCb) => {
       // const consumerToResume = client.downstreamTransports.find((t) => {
       //   return t[kind].producerId === pid;
       // });
-      try{
-        const consumerToResume = client.getDownstreamConsumer(pid, kind);
+      try {
+        const consumerToResume = client.getDownstreamConsumer(producerId, kind);
         await consumerToResume[kind]?.resume();
         ackCb({ status: "success" });
-      }catch(error){
+      } catch (error) {
         ackCb({ status: "error" });
       }
     });
