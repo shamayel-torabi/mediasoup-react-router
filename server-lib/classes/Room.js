@@ -51,6 +51,12 @@ class Room extends EventEmitter {
     this.clients.push(client);
   }
 
+  removeClient(client) {
+    this.clients = this.clients.filter(c => c.socket.id !== client.socket.id);
+    const newTransportsByPeer = this.updateActiveSpeakers();
+    this.sendProducersToConsume(newTransportsByPeer);
+  }
+
   /**
    * @param {{ id: string; text: any; userName: any; date: string; }} message
    */
@@ -91,33 +97,34 @@ class Room extends EventEmitter {
     // PLACEHOLDER - the activeSpeakerlist has changed!
     // updateActiveSpeakers = mute/unmute/get new transports
     const newTransportsByPeer = this.updateActiveSpeakers();
-    for (const [socketId, audioPidsToCreate] of Object.entries(
-      newTransportsByPeer
-    )) {
-      // we have the audioPidsToCreate this socket needs to create
-      // map the video pids and the username
-      const videoPidsToCreate = audioPidsToCreate.map(
-        (/** @type {any} */ aPid) => {
-          const producerClient = this.clients.find(
-            (c) => c?.producer?.audio?.id === aPid
-          );
-          return producerClient?.producer?.video?.id;
-        }
-      );
-      const associatedUserNames = audioPidsToCreate.map((aPid) => {
-        const producerClient = this.clients.find(
-          (c) => c?.producer?.audio?.id === aPid
-        );
-        return producerClient?.userName;
-      });
-      this.io.to(socketId).emit("newProducersToConsume", {
-        routerRtpCapabilities: this.router?.rtpCapabilities,
-        audioPidsToCreate,
-        videoPidsToCreate,
-        associatedUserNames,
-        activeSpeakerList: this.activeSpeakerList.slice(0, 5),
-      });
-    }
+    this.sendProducersToConsume(newTransportsByPeer);
+    // for (const [socketId, audioPidsToCreate] of Object.entries(
+    //   newTransportsByPeer
+    // )) {
+    //   // we have the audioPidsToCreate this socket needs to create
+    //   // map the video pids and the username
+    //   const videoPidsToCreate = audioPidsToCreate.map(
+    //     (/** @type {any} */ aPid) => {
+    //       const producerClient = this.clients.find(
+    //         (c) => c?.producer?.audio?.id === aPid
+    //       );
+    //       return producerClient?.producer?.video?.id;
+    //     }
+    //   );
+    //   const associatedUserNames = audioPidsToCreate.map((aPid) => {
+    //     const producerClient = this.clients.find(
+    //       (c) => c?.producer?.audio?.id === aPid
+    //     );
+    //     return producerClient?.userName;
+    //   });
+    //   this.io.to(socketId).emit("newProducersToConsume", {
+    //     routerRtpCapabilities: this.router?.rtpCapabilities,
+    //     audioPidsToCreate,
+    //     videoPidsToCreate,
+    //     associatedUserNames,
+    //     activeSpeakerList: this.activeSpeakerList.slice(0, 5),
+    //   });
+    // }
   }
 
   updateActiveSpeakers = () => {
@@ -221,6 +228,36 @@ class Room extends EventEmitter {
 
     return videoPid;
   };
+
+  sendProducersToConsume = (newTransportsByPeer) =>{
+    for (const [socketId, audioPidsToCreate] of Object.entries(
+      newTransportsByPeer
+    )) {
+      // we have the audioPidsToCreate this socket needs to create
+      // map the video pids and the username
+      const videoPidsToCreate = audioPidsToCreate.map(
+        (/** @type {any} */ aPid) => {
+          const producerClient = this.clients.find(
+            (c) => c?.producer?.audio?.id === aPid
+          );
+          return producerClient?.producer?.video?.id;
+        }
+      );
+      const associatedUserNames = audioPidsToCreate.map((aPid) => {
+        const producerClient = this.clients.find(
+          (c) => c?.producer?.audio?.id === aPid
+        );
+        return producerClient?.userName;
+      });
+      this.io.to(socketId).emit("newProducersToConsume", {
+        routerRtpCapabilities: this.router?.rtpCapabilities,
+        audioPidsToCreate,
+        videoPidsToCreate,
+        associatedUserNames,
+        activeSpeakerList: this.activeSpeakerList.slice(0, 5),
+      });
+    }
+  }
 }
 
 export default Room;

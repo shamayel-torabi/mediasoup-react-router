@@ -181,7 +181,7 @@ export const useMediasoup = () => {
           const consumer = await consumerTransport.consume(
             consumerParams.consumerOptions
           );
-          console.log("consume() has finished");
+          //console.log("consume() has finished");
           //const { track } = consumer;
           // add track events
           //unpause
@@ -200,18 +200,18 @@ export const useMediasoup = () => {
     // make a downstream transport for ONE producer/peer/client (with audio and video producers)
     const consumerTransport = device.current!.createRecvTransport(transportParams);
     consumerTransport.on("connectionstatechange", (state) => {
-      console.log("==connectionstatechange==");
-      console.log(state);
+      //console.log("==connectionstatechange==");
+      //console.log(state);
     });
     consumerTransport.on("icegatheringstatechange", (state) => {
-      console.log("==icegatheringstatechange==");
-      console.log(state);
+      //console.log("==icegatheringstatechange==");
+      //console.log(state);
     });
     // transport connect listener... fires on .consume()
     consumerTransport.on(
       "connect",
       async ({ dtlsParameters }, callback, errback) => {
-        console.log("Transport connect event has fired!");
+        //console.log("Transport connect event has fired!");
         // connect comes with local dtlsParameters. We need
         // to send these up to the server, so we can finish
         // the connection
@@ -220,7 +220,7 @@ export const useMediasoup = () => {
           "consumer",
           audioPid
         );
-        console.log(connectResp, "connectResp is back!");
+        //console.log(connectResp, "connectResp is back!");
         if (connectResp?.status === "success") {
           callback(); //this will finish our await consume
         } else {
@@ -248,7 +248,7 @@ export const useMediasoup = () => {
         // dtlsParams are created by the browser so we can finish
         // the other half of the connection
         // emit connectTransport
-        console.log("Connect running on produce...");
+        //console.log("Connect running on produce...");
         const connectResp = await connectTransport(dtlsParameters, "producer");
         console.log(connectResp, "connectResp is back");
         if (connectResp?.status === "success") {
@@ -262,10 +262,10 @@ export const useMediasoup = () => {
     );
     producerTransport.on("produce", async (parameters, callback, errback) => {
       // emit startProducing
-      console.log("Produce event is now running");
+      //console.log("Produce event is now running");
       const { kind, rtpParameters } = parameters;
       const produceResp = await startProducing(kind, rtpParameters);
-      console.log(produceResp, "produceResp is back!");
+      //console.log(produceResp, "produceResp is back!");
       if (produceResp?.error === "error") {
         errback(new Error("Error startProducing"));
       } else {

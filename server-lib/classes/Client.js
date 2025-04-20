@@ -47,6 +47,7 @@ class Client extends EventEmitter {
     //   );
     // }
 
+    this.room.removeClient(this);
     this.emit("close");
   }
 

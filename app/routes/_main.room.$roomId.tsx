@@ -30,7 +30,7 @@ const RemoteVideoPane = ({ combinedStream, userName, className }:
 
   return (
     <div className="grid grid-flow-row justify-items-center gap-0.5">
-      <video ref={video} className={className} autoPlay controls></video>
+      <video ref={video} className={className} autoPlay controls playsInline></video>
       <p className="text-center">{userName}</p>
     </div>
   )
@@ -39,10 +39,22 @@ const RemoteVideoPane = ({ combinedStream, userName, className }:
 export default function RoomPage({ loaderData }: Route.ComponentProps) {
   const { roomId } = loaderData;
   const { consumers, listOfActives, joinRoom, audioChange, startPublish } = useMediaContext();
-  const localMediaLeft = useRef<HTMLVideoElement | null>(null);
   const [pause, setPause] = useState(true);
   const [joined, setJoined] = useState(false);
   const [published, setPublished] = useState(false);
+  const localMediaLeft = useRef<HTMLVideoElement | null>(null);
+  const remoteVideo = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(()=>{
+    const aid = listOfActives[0];
+    if(aid){
+      const consumerForThisSlot = consumers[aid];
+      if(remoteVideo.current){
+        remoteVideo.current.srcObject = consumerForThisSlot?.combinedStream
+      }
+    }
+
+  },[listOfActives])
 
   const handleJoin = async () => {
     if (await joinRoom(roomId)) {
@@ -65,21 +77,7 @@ export default function RoomPage({ loaderData }: Route.ComponentProps) {
     setPause(result)
   }
 
-  const firstVideoRender = () => {
-    const aid = listOfActives[0];
-    const consumerForThisSlot = consumers[aid];
-
-    //console.log('firstVideoRender aid: ', aid)
-
-    return (
-      <div className="w-full border p-1">
-        <RemoteVideoPane
-          className="w-full aspect-video"
-          combinedStream={consumerForThisSlot?.combinedStream}
-          userName={consumerForThisSlot?.userName} />
-      </div>
-    )
-  }
+  
 
   const videoRender = () => {
     //console.log('videoRender listOfActives: ', listOfActives);
@@ -108,7 +106,10 @@ export default function RoomPage({ loaderData }: Route.ComponentProps) {
         <CardContent className="p-2 py-2 grid grid-cols-[1fr_16rem] gap-2" >
           <div className="grid grid-flow-row justify-items-center">
             <div className="w-full">
-              {firstVideoRender()}
+              <div className="grid grid-flow-row justify-items-center gap-0.5">
+                <video ref={remoteVideo} className="w-full aspect-video" autoPlay controls playsInline></video>
+                <p className="text-center">تست</p>
+              </div>
             </div>
             <div className="grid items-center">
               <div className="space-x-1">
