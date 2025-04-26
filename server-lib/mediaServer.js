@@ -46,6 +46,7 @@ const runMediaSoupServer = async (app) => {
             rooms: currentRooms,
         });
         socket.on("sendMessage", ({ text, userName, roomId }) => {
+            console.log('sendMessage:', { text, userName, roomId })
             const requestedRoom = rooms.get(roomId);
             if (requestedRoom) {
                 const message = {

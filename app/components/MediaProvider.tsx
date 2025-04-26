@@ -96,11 +96,12 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
     const joinRoom = async (room: string) => {
         const result = await joinMediaSoupRoom(user?.email!, room);
         if (!result) {
-            toast('خطا هنگام پیوستن به نشست!')
+            toast.error('خطا هنگام پیوستن به نشست!')
             return false;
         }
         else {
             setRoomId(room);
+            toast.success('پیوستن به نشست')
             return true;
         }
     }

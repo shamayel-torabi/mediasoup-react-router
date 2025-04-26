@@ -1,11 +1,12 @@
 import Chat from "~/components/Chat";
-import { memo, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMediaContext } from "~/components/MediaProvider";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import type { Route } from "./+types/_main.room.$roomId";
 import { redirect } from "react-router";
-import { Video, Pause, Play, PlugZap } from 'lucide-react';
+import { Video, Pause, Play } from 'lucide-react';
+import { RemoteVideoPane } from "~/components/RemoteVideoPane";
 
 export async function loader({ params }: Route.LoaderArgs) {
   //const searchParams = new URL(request.url).searchParams;
@@ -16,51 +17,34 @@ export async function loader({ params }: Route.LoaderArgs) {
   return { roomId }
 }
 
-const RemoteVideoPane = memo(({ combinedStream, userName, className }:
-  { combinedStream: MediaStream, userName: string, className: string }
-) => {
-  const video = useRef<HTMLVideoElement>(null)
-
-  useEffect(() => {
-    if (video.current) {
-      video.current.srcObject = combinedStream;
-    }
-
-  }, []);
-
-  return (
-    <div className="grid grid-flow-row justify-items-center gap-0.5">
-      <video ref={video} className={className} autoPlay controls playsInline></video>
-      <p className="text-center">{userName}</p>
-    </div>
-  )
-});
-
 export default function RoomPage({ loaderData }: Route.ComponentProps) {
-  const { roomId } = loaderData;
   const { consumers, activeSpeakers, joinRoom, audioChange, startPublish } = useMediaContext();
   const [pause, setPause] = useState(true);
   const [joined, setJoined] = useState(false);
   const [published, setPublished] = useState(false);
   const localMediaLeft = useRef<HTMLVideoElement>(null);
   const remoteVideo = useRef<HTMLVideoElement>(null);
+  const [roomId, setRoomId] = useState(()=> loaderData.roomId)
 
-  useEffect(()=>{
+  useEffect(() => {
+    const join = async () => {
+      if (await joinRoom(roomId)) {
+        setJoined(true);
+      }
+    }
+    join();
+  }, [])
+
+  useEffect(() => {
     const aid = activeSpeakers[0];
-    if(aid){
+    if (aid) {
       const consumerForThisSlot = consumers[aid];
-      if(remoteVideo.current){
+      if (remoteVideo.current) {
         remoteVideo.current.srcObject = consumerForThisSlot?.combinedStream
       }
     }
 
-  },[activeSpeakers])
-
-  const handleJoin = async () => {
-    if (await joinRoom(roomId)) {
-      setJoined(true);
-    }
-  }
+  }, [activeSpeakers])
 
   const handlePublish = async () => {
     if (localMediaLeft.current) {
@@ -68,6 +52,9 @@ export default function RoomPage({ loaderData }: Route.ComponentProps) {
       if (localStream) {
         localMediaLeft.current.srcObject = localStream;
         setPublished(true);
+      }
+      else{
+
       }
     }
   }
@@ -77,7 +64,7 @@ export default function RoomPage({ loaderData }: Route.ComponentProps) {
     setPause(result)
   }
 
-  
+
 
   const videoRender = () => {
     //console.log('videoRender listOfActives: ', listOfActives);
@@ -108,14 +95,11 @@ export default function RoomPage({ loaderData }: Route.ComponentProps) {
             <div className="w-full">
               <div className="grid grid-flow-row justify-items-center gap-0.5">
                 <video ref={remoteVideo} className="w-full aspect-video" autoPlay controls playsInline></video>
-                <p className="text-center">تست</p>
+                <p className="text-center"></p>
               </div>
             </div>
             <div className="grid items-center">
               <div className="space-x-1">
-                <Button variant="outline" disabled={published} onClick={handleJoin}>
-                  <PlugZap color="black" size={48} />
-                </Button>
                 <Button variant="outline" disabled={!joined} onClick={handlePublish}>
                   <Video color="red" size={48} />
                 </Button>

@@ -107,7 +107,7 @@ export const useMediasoup = (
 
   useEffect(() => {
     const clientSocket: Socket<ServerToClientEvents, ClientToServerEvents> =
-      io("/mediasoup");
+      io("/ws");
 
     clientSocket.on("connectionSuccess", (data) => {
       console.log(`Connection socketId: ${data.socketId}`);
@@ -142,11 +142,7 @@ export const useMediasoup = (
     };
   }, []);
 
-  const socketSendMessage = async (
-    text: string,
-    userName: string,
-    roomId: string
-  ) => {
+  const socketSendMessage = async ( text: string, userName: string,  roomId: string) => {
     socket?.emit("sendMessage", { text, userName, roomId });
   };
 
@@ -434,7 +430,7 @@ export const useMediasoup = (
       return false;
     }
 
-    console.log("consumeData: ", joinRoomResp.result);
+    //console.log("consumeData: ", joinRoomResp.result);
 
     dispatch({ type: ActionType.SET_MESSAGES, payload:  joinRoomResp.result?.messages});
     dispatch({ type: ActionType.SET_ACTIVE_SPEAKERS, payload:  joinRoomResp.result?.audioPidsToCreate});
