@@ -1,5 +1,5 @@
 import Chat from "~/components/Chat";
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { useMediaContext } from "~/components/MediaProvider";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
@@ -16,7 +16,7 @@ export async function loader({ params }: Route.LoaderArgs) {
   return { roomId }
 }
 
-const RemoteVideoPane = ({ combinedStream, userName, className }:
+const RemoteVideoPane = memo(({ combinedStream, userName, className }:
   { combinedStream: MediaStream, userName: string, className: string }
 ) => {
   const video = useRef<HTMLVideoElement>(null)
@@ -34,19 +34,19 @@ const RemoteVideoPane = ({ combinedStream, userName, className }:
       <p className="text-center">{userName}</p>
     </div>
   )
-}
+});
 
 export default function RoomPage({ loaderData }: Route.ComponentProps) {
   const { roomId } = loaderData;
-  const { consumers, listOfActives, joinRoom, audioChange, startPublish } = useMediaContext();
+  const { consumers, activeSpeakers, joinRoom, audioChange, startPublish } = useMediaContext();
   const [pause, setPause] = useState(true);
   const [joined, setJoined] = useState(false);
   const [published, setPublished] = useState(false);
-  const localMediaLeft = useRef<HTMLVideoElement | null>(null);
-  const remoteVideo = useRef<HTMLVideoElement | null>(null);
+  const localMediaLeft = useRef<HTMLVideoElement>(null);
+  const remoteVideo = useRef<HTMLVideoElement>(null);
 
   useEffect(()=>{
-    const aid = listOfActives[0];
+    const aid = activeSpeakers[0];
     if(aid){
       const consumerForThisSlot = consumers[aid];
       if(remoteVideo.current){
@@ -54,7 +54,7 @@ export default function RoomPage({ loaderData }: Route.ComponentProps) {
       }
     }
 
-  },[listOfActives])
+  },[activeSpeakers])
 
   const handleJoin = async () => {
     if (await joinRoom(roomId)) {
@@ -82,7 +82,7 @@ export default function RoomPage({ loaderData }: Route.ComponentProps) {
   const videoRender = () => {
     //console.log('videoRender listOfActives: ', listOfActives);
 
-    return listOfActives.map((aid, index) => {
+    return activeSpeakers.map((aid, index) => {
       const consumerForThisSlot = consumers[aid];
 
       if (index == 0) {
