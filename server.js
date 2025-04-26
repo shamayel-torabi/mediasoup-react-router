@@ -3,7 +3,7 @@ import compression from "compression";
 import express from "express";
 import morgan from "morgan";
 
-import runMediaSoupServer from './server-lib/mediaSoupServer.js'
+import runMediaSoupServer from './server-lib/mediaServer.js'
 
 // Short-circuit the type-checking of the built output.
 const BUILD_PATH = "./build/server/index.js";

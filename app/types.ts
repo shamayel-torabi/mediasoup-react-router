@@ -1,4 +1,4 @@
-import type { Consumer, RtpCapabilities, Transport } from "mediasoup-client/types"
+import type { Consumer, DtlsParameters, IceCandidate, IceParameters, MediaKind, RtpCapabilities, RtpParameters, Transport } from "mediasoup-client/types"
 
 export type Message = {
     id: string
@@ -31,7 +31,6 @@ export type ConsumeData = {
     audioPidsToCreate: string[];
     videoPidsToCreate: string[];
     associatedUserNames: string[];
-    activeSpeakerList: string[];
 }
 
 export type RemoteVideoType = {
@@ -39,8 +38,31 @@ export type RemoteVideoType = {
     mediaStream: MediaStream
 }
 
-export type Room = {
-    roomId: string,
-    roomName: string
-}
-
+  
+  export type ConsumerType = {
+    combinedStream: MediaStream;
+    userName: string;
+    consumerTransport: Transport;
+    audioConsumer: Consumer;
+    videoConsumer: Consumer;
+  };
+  
+  export type ClientTransportOptions = {
+    id: string;
+    iceParameters: IceParameters;
+    iceCandidates: IceCandidate[];
+    dtlsParameters: DtlsParameters;
+  };
+  
+  export type ClientParamsType = {
+    producerId: string;
+    id: string;
+    kind: MediaKind;
+    rtpParameters: RtpParameters;
+  };
+  
+  export type RoomType = {
+    roomId: string;
+    roomName: string;
+  };
+  
