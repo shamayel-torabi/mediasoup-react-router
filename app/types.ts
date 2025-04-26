@@ -1,68 +1,73 @@
-import type { Consumer, DtlsParameters, IceCandidate, IceParameters, MediaKind, RtpCapabilities, RtpParameters, Transport } from "mediasoup-client/types"
+import type {
+  Consumer,
+  DtlsParameters,
+  IceCandidate,
+  IceParameters,
+  MediaKind,
+  RtpCapabilities,
+  RtpParameters,
+  Transport,
+} from "mediasoup-client/types";
 
 export type Message = {
-    id: string
-    text: string
-    userName: string,
-    date: string
-}
-
+  id: string;
+  text: string;
+  userName: string;
+  date: string;
+};
 
 export type User = {
-    id: string;
-    email: string;
-    role: string;
-    firstName: string;
-    lastName: string;
-    image: string | null;
-    createdAt: Date;
-}
+  id: string;
+  email: string;
+  role: string;
+  firstName: string;
+  lastName: string;
+  image: string | null;
+  createdAt: Date;
+};
 
 export type MediaConsumer = {
-    combinedStream: MediaStream;
-    userName: string;
-    consumerTransport: Transport;
-    audioConsumer: Consumer,
-    videoConsumer: Consumer
-}
+  combinedStream: MediaStream;
+  userName: string;
+  consumerTransport: Transport;
+  audioConsumer: Consumer;
+  videoConsumer: Consumer;
+};
 
 export type ConsumeData = {
-    routerRtpCapabilities: RtpCapabilities;
-    audioPidsToCreate: string[];
-    videoPidsToCreate: string[];
-    associatedUserNames: string[];
-}
+  audioPidsToCreate: string[];
+  videoPidsToCreate: string[];
+  associatedUserNames: string[];
+};
 
 export type RemoteVideoType = {
-    id: number,
-    mediaStream: MediaStream
-}
+  id: number;
+  mediaStream: MediaStream;
+};
 
-  
-  export type ConsumerType = {
-    combinedStream: MediaStream;
-    userName: string;
-    consumerTransport: Transport;
-    audioConsumer: Consumer;
-    videoConsumer: Consumer;
-  };
-  
-  export type ClientTransportOptions = {
-    id: string;
-    iceParameters: IceParameters;
-    iceCandidates: IceCandidate[];
-    dtlsParameters: DtlsParameters;
-  };
-  
-  export type ClientParamsType = {
-    producerId: string;
-    id: string;
-    kind: MediaKind;
-    rtpParameters: RtpParameters;
-  };
-  
-  export type RoomType = {
-    roomId: string;
-    roomName: string;
-  };
-  
+export type ConsumerType = {
+  combinedStream: MediaStream;
+  userName: string;
+  consumerTransport: Transport;
+  audioConsumer: Consumer;
+  videoConsumer: Consumer;
+};
+
+export type ClientTransportOptions = {
+  id: string;
+  iceParameters: IceParameters;
+  iceCandidates: IceCandidate[];
+  dtlsParameters: DtlsParameters;
+};
+
+export type ClientParamsType = {
+  producerId: string;
+  id: string;
+  kind: MediaKind;
+  rtpParameters: RtpParameters;
+};
+
+export type RoomType = {
+  roomId: string;
+  roomName: string;
+};
