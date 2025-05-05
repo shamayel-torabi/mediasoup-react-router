@@ -101,8 +101,6 @@ export const useMediasoup = (
   const [socket, setSocket] =
     useState<Socket<ServerToClientEvents, ClientToServerEvents>>();
 
-  //const [device, setDevice] = useState<Device>();
-
   const device = useRef<Device>(null);
   const producerTransport = useRef<Transport>(null);
   const audioProducer = useRef<Producer>(null);
@@ -127,10 +125,6 @@ export const useMediasoup = (
 
     clientSocket.on("newProducersToConsume", (consumeData) => {
       requestTransportToConsume(consumeData);
-      dispatch({
-        type: ActionType.SET_ACTIVE_SPEAKERS,
-        payload: consumeData.audioPidsToCreate,
-      });
     });
 
     clientSocket.on("updateActiveSpeakers", async (newListOfActives) => {
@@ -354,30 +348,33 @@ export const useMediasoup = (
   };
 
   const requestTransportToConsume = (consumeData: ConsumeData) => {
-    const consumers: Record<string, MediaConsumer> = {};
+    //let consumers: Record<string, MediaConsumer> = {};
+
+    //console.log('requestTransportToConsume consumeData:', consumeData)
+
 
     consumeData.audioPidsToCreate.forEach(async (audioPid, i) => {
-      const videoPid = consumeData.videoPidsToCreate[i];
-      // expecting back transport params for THIS audioPid. Maybe 5 times, maybe 0
-
-      const consumerTransportParams = await socket?.emitWithAck(
-        "requestTransport",
-        { type: "consumer", audioPid }
-      );
-      //console.log(consumerTransportParams);
 
       try {
+        const videoPid = consumeData.videoPidsToCreate[i];
+
+        const consumerTransportParams = await socket?.emitWithAck(
+          "requestTransport",
+          { type: "consumer", audioPid }
+        );
+        //console.log('requestTransportToConsume consumerTransportParams:', consumerTransportParams);
+  
         const consumerTransport = createConsumerTransport(
           consumerTransportParams!,
           audioPid
-        );  
-  
+        );
+
         const [audioConsumer, videoConsumer] = await Promise.all([
-          createConsumer(consumerTransport!, audioPid, "audio"),
-          createConsumer(consumerTransport!, videoPid, "video"),
+          createConsumer(consumerTransport, audioPid, "audio"),
+          createConsumer(consumerTransport, videoPid, "video"),
         ]);
-        //console.log(audioConsumer);
-        //console.log(videoConsumer);
+        //console.log('audioConsumer: ', audioConsumer);
+        //console.log('videoConsumer: ', videoConsumer);
         // create a new MediaStream on the client with both tracks
         // This is why we have gone through all this pain!!!
         const combinedStream = new MediaStream([
@@ -385,31 +382,40 @@ export const useMediasoup = (
           videoConsumer.track,
         ]);
 
-        // const remoteVideo = document.getElementById(`remote-video-${i}`) as HTMLVideoElement;
-        // remoteVideo.srcObject = combinedStream;
 
         //setRemoteStreams(prev => [...prev, combinedStream])
 
-        console.log("Hope this works...");
+        //console.log("Hope this works...");
 
-        consumers[audioPid] = {
+
+        const consumer: Record<string, MediaConsumer> = {}
+        consumer[audioPid] = {
           combinedStream,
           userName: consumeData.associatedUserNames[i],
           consumerTransport,
           audioConsumer: audioConsumer,
           videoConsumer: videoConsumer,
         };
+
+        dispatch({ type: ActionType.SET_CONSUMER, payload: consumer })
       } catch (error) {
         console.log(error);
       }
     });
 
-    dispatch({ type: ActionType.SET_CONSUMERS, payload: consumers });
+    //console.log('requestTransportToConsume consumers:', consumers)
+
+    //dispatch({ type: ActionType.SET_CONSUMERS, payload: consumers });
+
+    // dispatch({
+    //   type: ActionType.SET_ACTIVE_SPEAKERS,
+    //   payload: consumeData.audioPidsToCreate,
+    // });
   };
 
   const joinMediaSoupRoom = (userName: string, roomId: string) => {
     return new Promise<void>(async (resolve, reject) => {
-      console.log("joinMediaSoupRoom:", { userName, roomId });
+      //console.log("joinMediaSoupRoom:", { userName, roomId });
       const joinRoomResp = await socket?.emitWithAck("joinRoom", {
         userName,
         roomId,
@@ -418,7 +424,6 @@ export const useMediasoup = (
       if (!joinRoomResp) {
         reject(new Error("result is null"));
       } else if (joinRoomResp.error) {
-        console.log("joinRoomResp:", joinRoomResp);
         reject(new Error("Error joinRoom"));
       } else {
         dispatch({
@@ -437,7 +442,6 @@ export const useMediasoup = (
             routerRtpCapabilities: joinRoomResp.result?.routerRtpCapabilities!,
           });
         } catch (error) {
-          console.log("Error creating device");
           reject(new Error("Error creating device"));
         }
 
@@ -447,7 +451,8 @@ export const useMediasoup = (
           associatedUserNames: joinRoomResp.result?.associatedUserNames!,
         };
 
-        requestTransportToConsume(consumeData);
+        const consumers = requestTransportToConsume(consumeData);
+
 
         resolve();
       }

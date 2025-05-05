@@ -1,5 +1,5 @@
 import Chat from "~/components/Chat";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useMediaContext } from "~/components/MediaProvider";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
@@ -26,14 +26,26 @@ export default function RoomPage({ loaderData }: Route.ComponentProps) {
   const remoteMedia = useRef<HTMLVideoElement>(null);
   const roomId = loaderData.roomId;
 
-  const updateRemoteVideos = async (newListOfActives: string[]) => {
-    console.log("updateActiveSpeakers:", newListOfActives);
+  const updateRemoteVideos = useCallback(() => {
+    console.log("activeSpeakers:", activeSpeakers);
+    //console.log('consumers', consumers)
 
-    const aid = activeSpeakers[0];
-    const consumer = consumers[aid];
-    if (remoteMedia.current) {
-      remoteMedia.current.srcObject = consumer?.combinedStream;
+    //const aid = activeSpeakers[0];
+    //console.log('aid:', aid)
+    //const consumer = consumers[aid];
+
+    //console.log('consumer', consumer)
+
+    for (const [aid, consumer] of Object.entries(consumers)){
+      console.log('aid', aid),
+      console.log('consumer:', consumer)
+      if (remoteMedia.current && aid === activeSpeakers[0]) {
+        remoteMedia.current.srcObject = consumer?.combinedStream;
+      }
     }
+
+
+    
     // for (let el of remoteVideos) {
     //   el.srcObject = null; //clear out the <video>
     // }
@@ -48,12 +60,16 @@ export default function RoomPage({ loaderData }: Route.ComponentProps) {
     //     slot++; //for the next
     //   }
     // });
-  }
+  },[consumers, activeSpeakers])
 
-  const handleJoin = async () => {
-    await joinRoom(roomId);
-    setJoined(true);
-  }
+  const handleJoin = useCallback(async () => {
+    try {
+      await joinRoom(roomId);
+      setJoined(true); 
+    } catch (error) {
+      toast.error('خطا هنگام پیوستن به نشست!')      
+    }
+  },[roomId])
 
   useEffect(() => {
     if (roomId)
@@ -61,10 +77,8 @@ export default function RoomPage({ loaderData }: Route.ComponentProps) {
   }, []);
 
   useEffect(() => {
-    updateRemoteVideos(activeSpeakers);
-  }, [activeSpeakers]);
-
-
+    updateRemoteVideos();
+  }, [consumers]);
 
   const handlePublish = async (source: 'camera' | 'desktop') => {
     let localStream: MediaStream | null;
@@ -114,7 +128,7 @@ export default function RoomPage({ loaderData }: Route.ComponentProps) {
           <div className="grid grid-flow-row justify-items-center">
             <div className="w-full">
               <div className="grid grid-flow-row justify-items-center gap-0.5">
-                <video ref={remoteMedia} className="aspect-video" autoPlay></video>
+                <video ref={remoteMedia} className="w-[80%] aspect-video" autoPlay controls playsInline></video>
               </div>
             </div>
             <div className="grid items-center">

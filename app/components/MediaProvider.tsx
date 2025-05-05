@@ -31,8 +31,7 @@ export enum ActionType {
     SET_ROOM_ID = 'SET_ROOM_ID',
     ADD_ROOM = 'ADD_ROOM',
     SET_ACTIVE_SPEAKERS = 'SET_ACTIVE_SPEAKERS',
-    SET_CONSUMERS = 'SET_CONSUMERS'
-
+    SET_CONSUMER = 'SET_CONSUMER'
 }
 export type Action = {
     type: ActionType;
@@ -62,8 +61,8 @@ function mediaReducer(state: MediaState, action: Action) {
             return { ...state, rooms: [...state.rooms, payload] };
         case ActionType.SET_ACTIVE_SPEAKERS:
             return { ...state, activeSpeakers: payload };
-        case ActionType.SET_CONSUMERS:
-            return { ...state, consumers: payload };
+        case ActionType.SET_CONSUMER:
+            return { ...state, consumers:{...state.consumers, ...payload} };
         default:
             return state;
     }
@@ -99,7 +98,7 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
             }
         }
 
-        if (state.roomId && user?.email){
+        if (state.roomId && user?.email) {
             join();
         }
     }, [state.roomId]);
