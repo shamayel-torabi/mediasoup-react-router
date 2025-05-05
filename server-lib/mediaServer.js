@@ -46,7 +46,6 @@ const runMediaSoupServer = async (app) => {
             rooms: currentRooms,
         });
         socket.on("sendMessage", ({ text, userName, roomId }) => {
-            console.log('sendMessage:', { text, userName, roomId })
             const requestedRoom = rooms.get(roomId);
             if (requestedRoom) {
                 const message = {
@@ -98,10 +97,11 @@ const runMediaSoupServer = async (app) => {
                         result: {
                             routerRtpCapabilities: client.room.router?.rtpCapabilities,
                             newRoom,
+                            clientId: client.id,
+                            messages: client.room.messages,
                             audioPidsToCreate,
                             videoPidsToCreate,
                             associatedUserNames,
-                            messages: client.room.messages,
                         },
                     });
                 }
@@ -115,6 +115,23 @@ const runMediaSoupServer = async (app) => {
                 ackCb({ error: `Room with Id ${roomId} does not exist` });
             }
         });
+        socket.on("closeClient", ({ roomId , clientId}, ackCb) => {
+            try {
+                const requestedRoom = rooms.get(roomId);
+                if (!requestedRoom)
+                    throw new Error(`Error Closing RoomId: ${roomId}`);
+
+                const c = requestedRoom.clients.find(rc => rc.id === clientId);
+                c?.close();
+                ackCb({status: "success"});                
+            } catch (error) {
+                const errorMessage = error instanceof Error
+                    ? error.message
+                    : `Error Closing RoomId: ${roomId}`;
+                console.log(errorMessage);
+                ackCb({ status: errorMessage });
+            }
+        })
         socket.on("closeRoom", ({ roomId }, ackCb) => {
             try {
                 const requestedRoom = rooms.get(roomId);
@@ -128,7 +145,7 @@ const runMediaSoupServer = async (app) => {
                     ? error.message
                     : `Error Closing RoomId: ${roomId}`;
                 console.log(errorMessage);
-                ackCb({ status: "error" });
+                ackCb({ status: errorMessage });
             }
         });
         socket.on("requestTransport", async ({ type, audioPid }, ackCb) => {

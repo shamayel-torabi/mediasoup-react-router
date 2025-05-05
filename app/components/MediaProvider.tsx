@@ -2,7 +2,6 @@ import {
     createContext,
     useContext,
     useReducer,
-    useState
 } from 'react'
 
 import { type MediaConsumer, type Message, type RoomType } from '~/types';
@@ -18,7 +17,7 @@ type MediaContextType = {
     creatRoom: (roomName: string) => Promise<string>
     sendMessage: (text: string) => Promise<void>,
     joinRoom: (roomId: string) => Promise<boolean>,
-    startPublish: () => Promise<MediaStream | undefined>,
+    startPublish: (localStream: MediaStream) => Promise<void>,
     audioChange: () => boolean,
 }
 
@@ -28,6 +27,7 @@ export enum ActionType {
     SET_MESSAGES = 'SET_MESSAGES',
     ADD_MESSAGE = 'ADD_MESSAGE',
     SET_ROOMS = 'SET_ROOMS',
+    SET_ROOM_ID = 'SET_ROOM_ID',
     ADD_ROOM = 'ADD_ROOM',
     SET_ACTIVE_SPEAKERS = 'SET_ACTIVE_SPEAKERS',
     SET_CONSUMERS = 'SET_CONSUMERS'
@@ -39,6 +39,7 @@ export type Action = {
 }
 
 type MediaState = {
+    roomId: string;
     messages: Message[];
     rooms: RoomType[];
     activeSpeakers: string[];
@@ -54,6 +55,8 @@ function mediaReducer(state: MediaState, action: Action) {
             return { ...state, messages: [...state.messages, payload] };
         case ActionType.SET_ROOMS:
             return { ...state, rooms: payload };
+        case ActionType.SET_ROOM_ID:
+            return { ...state, roomId: payload };
         case ActionType.ADD_ROOM:
             return { ...state, rooms: [...state.rooms, payload] };
         case ActionType.SET_ACTIVE_SPEAKERS:
@@ -66,15 +69,15 @@ function mediaReducer(state: MediaState, action: Action) {
 }
 
 const initState: MediaState = {
+    roomId: '',
     messages: [],
     rooms: [],
     activeSpeakers: [],
-    consumers: {}
+    consumers: {},
 }
 
 export default function MediaProvider({ children }: Readonly<{ children: React.ReactNode }>) {
     const { user } = useUserContext();
-    const [roomId, setRoomId] = useState('');
     const [state, dispatch] = useReducer(mediaReducer, initState);
 
     const {
@@ -87,22 +90,24 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
 
 
     const sendMessage = async (text: string) => {
-        if (roomId) {
+        if (state.roomId) {
             const userName = `${user?.firstName} ${user?.lastName}`;
-            socketSendMessage(text, userName, roomId);
+            socketSendMessage(text, userName, state.roomId);
         }
     }
 
-    const joinRoom = async (room: string) => {
-        const result = await joinMediaSoupRoom(user?.email!, room);
-        if (!result) {
-            toast.error('خطا هنگام پیوستن به نشست!')
-            return false;
-        }
-        else {
-            setRoomId(room);
+    const joinRoom = async (roomId: string) => {
+        console.log('roomId:', roomId);
+        try {
+            await joinMediaSoupRoom(user?.email!, roomId);
+            dispatch({ type: ActionType.SET_ROOM_ID, payload: roomId });
             toast.success('پیوستن به نشست')
             return true;
+
+        } catch (error) {
+            console.log(error)
+            toast.error('خطا هنگام پیوستن به نشست!')
+            return false;
         }
     }
 

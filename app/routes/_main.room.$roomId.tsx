@@ -1,12 +1,12 @@
 import Chat from "~/components/Chat";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMediaContext } from "~/components/MediaProvider";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import type { Route } from "./+types/_main.room.$roomId";
 import { redirect } from "react-router";
-import { Video, Pause, Play } from 'lucide-react';
-import { RemoteVideoPane } from "~/components/RemoteVideoPane";
+import { Video, Pause, Play, MonitorPlay, Cable } from 'lucide-react';
+import { toast } from "sonner";
 
 export async function loader({ params }: Route.LoaderArgs) {
   //const searchParams = new URL(request.url).searchParams;
@@ -22,8 +22,33 @@ export default function RoomPage({ loaderData }: Route.ComponentProps) {
   const [pause, setPause] = useState(true);
   const [joined, setJoined] = useState(false);
   const [published, setPublished] = useState(false);
-  const localMediaLeft = useRef<HTMLVideoElement>(null);
+  const localMedia = useRef<HTMLVideoElement>(null);
+  const remoteMedia = useRef<HTMLVideoElement>(null);
   const roomId = loaderData.roomId;
+
+  const updateRemoteVideos = async (newListOfActives: string[]) => {
+    console.log("updateActiveSpeakers:", newListOfActives);
+
+    const aid = activeSpeakers[0];
+    const consumer = consumers[aid];
+    if (remoteMedia.current) {
+      remoteMedia.current.srcObject = consumer?.combinedStream;
+    }
+    // for (let el of remoteVideos) {
+    //   el.srcObject = null; //clear out the <video>
+    // }
+
+    // let slot = 0;
+    // newListOfActives.forEach((aid) => {
+    //   if (aid !== audioProducer?.id) {
+    //     const consumer = consumers[aid];
+
+    //     remoteVideos[slot].srcObject = consumer?.combinedStream;
+    //     remoteUserNames[slot] = consumer?.userName;
+    //     slot++; //for the next
+    //   }
+    // });
+  }
 
   const handleJoin = async () => {
     if (await joinRoom(roomId)) {
@@ -31,14 +56,49 @@ export default function RoomPage({ loaderData }: Route.ComponentProps) {
     }
   }
 
-  const handlePublish = async () => {
-    if (localMediaLeft.current) {
-      const localStream = await startPublish();
-      if (localStream) {
-        localMediaLeft.current.srcObject = localStream;
-        setPublished(true);
+  useEffect(() => {
+    if (roomId)
+      handleJoin()
+  }, []);
+
+  useEffect(() => {
+    updateRemoteVideos(activeSpeakers);
+  }, [consumers, activeSpeakers]);
+
+
+
+  const handlePublish = async (source: 'camera' | 'desktop') => {
+    let localStream: MediaStream | null;
+    if (localMedia.current) {
+      try {
+        if (source === 'camera') {
+          localStream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: true,
+          });
+        }
+        else {
+          const displayMediaOptions = {
+            video: {
+              cursor: "always",
+              height: 1000,
+              width: 1200,
+            },
+            audio: true,
+          };
+          localStream =
+            await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
+        }
+
+        if (localStream) {
+          await startPublish(localStream);
+
+          localMedia.current.srcObject = localStream;
+          setPublished(true);
+        }
       }
-      else {
+      catch (error) {
+        toast('خطا هنگام ارسال رسانه')
       }
     }
   }
@@ -48,38 +108,6 @@ export default function RoomPage({ loaderData }: Route.ComponentProps) {
     setPause(result)
   }
 
-  const mainVideoRender = useCallback(() => {
-
-    const aid = activeSpeakers[0];
-    // if(aid) console.log('aid:', aid);
-    // const consumerForThisSlot = consumers[aid];
-
-    return (
-      <RemoteVideoPane aid={aid} className="h-full aspect-video" />
-    )
-  }, [consumers, activeSpeakers])
-
-  // const videoRender = () => {
-  //   //console.log('videoRender listOfActives: ', listOfActives);
-
-  //   return activeSpeakers.map((aid, index) => {
-  //     const consumerForThisSlot = consumers[aid];
-
-  //     if (index == 0) {
-  //       return null;
-  //     }
-
-  //     return (
-  //       <div key={index} className="h-32 border p-1">
-  //         <RemoteVideoPane
-  //           className="h-full aspect-video"
-  //           combinedStream={consumerForThisSlot?.combinedStream}
-  //           userName={consumerForThisSlot?.userName} />
-  //       </div>
-  //     )
-  //   })
-  // }
-
   return (
     <div className="grid grid-cols-[1fr_20rem] min-w-5xl">
       <Card className="my-2 ms-2">
@@ -87,14 +115,19 @@ export default function RoomPage({ loaderData }: Route.ComponentProps) {
           <div className="grid grid-flow-row justify-items-center">
             <div className="w-full">
               <div className="grid grid-flow-row justify-items-center gap-0.5">
-                {mainVideoRender()}
+                <video ref={remoteMedia} className="aspect-video" autoPlay></video>
               </div>
             </div>
             <div className="grid items-center">
               <div className="space-x-1">
-                <Button variant="outline" disabled={joined} onClick={handleJoin}>Connect</Button>
-                <Button variant="outline" disabled={!joined} onClick={handlePublish}>
+                {/* <Button variant="outline" disabled={joined} onClick={handleJoin}>
+                  <Cable color="red" size={48} />
+                </Button> */}
+                <Button variant="outline" disabled={!joined} onClick={() => handlePublish('camera')}>
                   <Video color="red" size={48} />
+                </Button>
+                <Button variant="outline" disabled={!joined} onClick={() => handlePublish("desktop")}>
+                  <MonitorPlay color="red" size={48} />
                 </Button>
                 <Button variant="outline" disabled={!published} onClick={handleMute}>
                   {pause ? <Play color="black" size={48} /> : <Pause color="red" size={48} />}
@@ -104,10 +137,9 @@ export default function RoomPage({ loaderData }: Route.ComponentProps) {
           </div>
           <div className="grid justify-self-start items-start gap-2">
             <div className="h-32 grid grid-flow-row justify-items-center gap-1 border p-1">
-              <video ref={localMediaLeft} className="aspect-video" muted autoPlay></video>
+              <video ref={localMedia} className="aspect-video" muted autoPlay></video>
               <p className="text-center">من</p>
             </div>
-
           </div>
         </CardContent>
       </Card>

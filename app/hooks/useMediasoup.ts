@@ -44,6 +44,7 @@ interface ClientToServerEvents {
       result?: {
         routerRtpCapabilities: RtpCapabilities;
         newRoom: boolean;
+        clientId: string;
         audioPidsToCreate: string[];
         videoPidsToCreate: string[];
         associatedUserNames: string[];
@@ -100,10 +101,12 @@ export const useMediasoup = (
   const [socket, setSocket] =
     useState<Socket<ServerToClientEvents, ClientToServerEvents>>();
 
-  const device = useRef<Device>(null);
-  const producerTransport= useRef<Transport>(null);
-  const audioProducer = useRef< Producer>(null);
-  const videoProducer= useRef< Producer>(null);
+  const [device, setDevice] = useState<Device>();
+
+  //const device = useRef<Device>(null);
+  const producerTransport = useRef<Transport>(null);
+  const audioProducer = useRef<Producer>(null);
+  const videoProducer = useRef<Producer>(null);
 
   useEffect(() => {
     const clientSocket: Socket<ServerToClientEvents, ClientToServerEvents> =
@@ -124,6 +127,10 @@ export const useMediasoup = (
 
     clientSocket.on("newProducersToConsume", (consumeData) => {
       requestTransportToConsume(consumeData);
+      dispatch({
+        type: ActionType.SET_ACTIVE_SPEAKERS,
+        payload: consumeData.audioPidsToCreate,
+      });
     });
 
     clientSocket.on("updateActiveSpeakers", async (newListOfActives) => {
@@ -131,8 +138,6 @@ export const useMediasoup = (
         type: ActionType.SET_ACTIVE_SPEAKERS,
         payload: newListOfActives,
       });
-
-      //setListOfActives(newListOfActives);
     });
 
     setSocket(clientSocket);
@@ -142,7 +147,11 @@ export const useMediasoup = (
     };
   }, []);
 
-  const socketSendMessage = async (text: string, userName: string, roomId: string) => {
+  const socketSendMessage = async (
+    text: string,
+    userName: string,
+    roomId: string
+  ) => {
     socket?.emit("sendMessage", { text, userName, roomId });
   };
 
@@ -215,9 +224,11 @@ export const useMediasoup = (
     transportParams: TransportOptions,
     audioPid: string
   ) => {
+    if (!device) throw new Error("device undefined");
+
     // make a downstream transport for ONE producer/peer/client (with audio and video producers)
-    const consumerTransport = device.current!.createRecvTransport(transportParams);
-    consumerTransport.on("connectionstatechange", (state) => {
+    const consumerTransport = device.createRecvTransport(transportParams);
+    consumerTransport?.on("connectionstatechange", (state) => {
       //console.log("==connectionstatechange==");
       //console.log(state);
     });
@@ -286,45 +297,55 @@ export const useMediasoup = (
       //console.log('producerTransportParams:', producerTransportParams)
       //use the device to create a front-end transport to send
       // it takes our object from requestTransport
-      const producerTransport = device.current!.createSendTransport(
-        producerTransportParams!
-      );
-      // console.log(producerTransport)
-      producerTransport.on("connect",  async ({ dtlsParameters }, callback, errback) => {
-          // transport connect event will NOT fire until transport.produce() runs
-          // dtlsParams are created by the browser so we can finish
-          // the other half of the connection
-          // emit connectTransport
-          //console.log("Connect running on produce...");
-          const connectResp = await connectTransport(
-            dtlsParameters,
-            "producer"
-          );
-          console.log(connectResp, "connectResp is back");
-          if (connectResp === "success") {
-            // we are connected! move forward
-            callback();
-          } else if (connectResp === "error") {
-            // connection failed. Stop
-            errback(new Error("Error connectTransport"));
-          }
-        }
-      );
-      producerTransport.on("produce", async (parameters, callback, errback) => {
-        // emit startProducing
-        //console.log("Produce event is now running");
-        const { kind, rtpParameters } = parameters;
-        const produceResp = await startProducing(kind, rtpParameters);
-        //console.log(produceResp, "produceResp is back!");
-        if (produceResp?.error === "error") {
-          errback(new Error("Error startProducing"));
-        } else {
-          // only other option is the producer id
-          callback({ id: produceResp?.producerId! });
-        }
-      });
 
-      resolve(producerTransport);
+      if (device) {
+        const producerTransport = device.createSendTransport(
+          producerTransportParams!
+        );
+        // console.log(producerTransport)
+        producerTransport.on(
+          "connect",
+          async ({ dtlsParameters }, callback, errback) => {
+            // transport connect event will NOT fire until transport.produce() runs
+            // dtlsParams are created by the browser so we can finish
+            // the other half of the connection
+            // emit connectTransport
+            //console.log("Connect running on produce...");
+            const connectResp = await connectTransport(
+              dtlsParameters,
+              "producer"
+            );
+            console.log(connectResp, "connectResp is back");
+            if (connectResp === "success") {
+              // we are connected! move forward
+              callback();
+            } else if (connectResp === "error") {
+              // connection failed. Stop
+              errback(new Error("Error connectTransport"));
+            }
+          }
+        );
+        producerTransport.on(
+          "produce",
+          async (parameters, callback, errback) => {
+            // emit startProducing
+            //console.log("Produce event is now running");
+            const { kind, rtpParameters } = parameters;
+            const produceResp = await startProducing(kind, rtpParameters);
+            //console.log(produceResp, "produceResp is back!");
+            if (produceResp?.error === "error") {
+              errback(new Error("Error startProducing"));
+            } else {
+              // only other option is the producer id
+              callback({ id: produceResp?.producerId! });
+            }
+          }
+        );
+
+        resolve(producerTransport!);
+      } else {
+        reject(new Error("device undefined"));
+      }
     });
 
   const createConsumer = (
@@ -335,35 +356,39 @@ export const useMediasoup = (
     return new Promise<Consumer>(async (resolve, reject) => {
       // consume from the basics, emit the consumeMedia event, we take
       // the params we get back, and run .consume(). That gives us our track
-      const consumerParams = await consumeMedia(
-        device.current!.rtpCapabilities,
-        producerId,
-        kind
-      );
+      if (device) {
+        const consumerParams = await consumeMedia(
+          device.rtpCapabilities,
+          producerId,
+          kind
+        );
 
-      if (consumerParams) {
-        //console.log("consumerParams:", consumerParams);
-        if (consumerParams?.status === "cannotConsume") {
-          console.log("Cannot consume");
-          reject(new Error("Cannot consume"));
-        } else if (consumerParams?.status === "consumeFailed") {
-          console.log("Consume failed...");
-          reject(new Error("Consume failed..."));
+        if (consumerParams) {
+          //console.log("consumerParams:", consumerParams);
+          if (consumerParams?.status === "cannotConsume") {
+            console.log("Cannot consume");
+            reject(new Error("Cannot consume"));
+          } else if (consumerParams?.status === "consumeFailed") {
+            console.log("Consume failed...");
+            reject(new Error("Consume failed..."));
+          } else {
+            // we got valid params! Use them to consume
+            const consumer = await consumerTransport.consume(
+              consumerParams.consumerOptions!
+            );
+            //console.log("consume() has finished");
+            //const { track } = consumer;
+            // add track events
+            //unpause
+            const result = await unpauseConsumer(producerId, kind);
+            console.log("unpauseConsumer result", result);
+            resolve(consumer);
+          }
         } else {
-          // we got valid params! Use them to consume
-          const consumer = await consumerTransport.consume(
-            consumerParams.consumerOptions!
-          );
-          //console.log("consume() has finished");
-          //const { track } = consumer;
-          // add track events
-          //unpause
-          const result = await unpauseConsumer(producerId, kind);
-          console.log("unpauseConsumer result", result);
-          resolve(consumer);
+          reject(new Error("consumerParams is null"));
         }
       } else {
-        reject(new Error("consumerParams is null"));
+        reject(new Error("device undefined"));
       }
     });
   };
@@ -388,8 +413,8 @@ export const useMediasoup = (
 
       try {
         const [audioConsumer, videoConsumer] = await Promise.all([
-          createConsumer(consumerTransport, audioPid, "audio"),
-          createConsumer(consumerTransport, videoPid, "video"),
+          createConsumer(consumerTransport!, audioPid, "audio"),
+          createConsumer(consumerTransport!, videoPid, "video"),
         ]);
         //console.log(audioConsumer);
         //console.log(videoConsumer);
@@ -422,41 +447,51 @@ export const useMediasoup = (
     dispatch({ type: ActionType.SET_CONSUMERS, payload: consumers });
   };
 
+  const joinMediaSoupRoom = (userName: string, roomId: string) => {
+    return new Promise<void>(async (resolve, reject) => {
+      const joinRoomResp = await joinRoom(userName, roomId);
+      if (!joinRoomResp) {
+        reject(new Error("result is null"));
+      } else if (joinRoomResp.error) {
+        console.log("joinRoomResp:", joinRoomResp);
+        reject(new Error("Error joinRoom"));
+      } else {
+        dispatch({
+          type: ActionType.SET_MESSAGES,
+          payload: joinRoomResp.result?.messages,
+        });
+        dispatch({
+          type: ActionType.SET_ACTIVE_SPEAKERS,
+          payload: joinRoomResp.result?.audioPidsToCreate,
+        });
 
-  const joinMediaSoupRoom = async (userName: string, roomId: string) => {
-    const joinRoomResp = await joinRoom(userName, roomId);
-    if (!joinRoomResp || joinRoomResp.error) {
-      return false;
-    }
+        try {
+          const d = new Device();
+          setDevice(d);
 
-    console.log("joinRoomResp: ", joinRoomResp.result);
+          await device?.load({
+            routerRtpCapabilities: joinRoomResp.result?.routerRtpCapabilities!,
+          });
+        } catch (error) {
+          console.log("Error creating device");
+          reject(new Error("Error creating device"));
+        }
 
-    dispatch({ type: ActionType.SET_MESSAGES, payload: joinRoomResp.result?.messages });
-    dispatch({ type: ActionType.SET_ACTIVE_SPEAKERS, payload: joinRoomResp.result?.audioPidsToCreate });
+        const consumeData: ConsumeData = {
+          audioPidsToCreate: joinRoomResp.result?.audioPidsToCreate!,
+          videoPidsToCreate: joinRoomResp.result?.videoPidsToCreate!,
+          associatedUserNames: joinRoomResp.result?.associatedUserNames!,
+        };
 
-    device.current = new Device();
-    await device.current.load({
-      routerRtpCapabilities: joinRoomResp.result?.routerRtpCapabilities!,
+        requestTransportToConsume(consumeData);
+
+        resolve();
+      }
     });
-
-    const consumeData: ConsumeData = {
-      audioPidsToCreate: joinRoomResp.result?.audioPidsToCreate!,
-      videoPidsToCreate: joinRoomResp.result?.videoPidsToCreate!,
-      associatedUserNames: joinRoomResp.result?.associatedUserNames!,
-    };
-
-    requestTransportToConsume(consumeData);
-
-    return true;
   };
 
-  const startPublish = async () => {
+  const startPublish = async (localStream: MediaStream) => {
     try {
-      const localStream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      });
-
       const pTransport = await createProducerTransport();
       producerTransport.current = pTransport;
 
@@ -464,7 +499,6 @@ export const useMediasoup = (
       audioProducer.current = producers.audioProducer;
       videoProducer.current = producers.videoProducer;
 
-      return localStream;
     } catch (err) {
       console.log(err);
     }

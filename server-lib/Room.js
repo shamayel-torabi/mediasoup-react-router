@@ -26,17 +26,22 @@ export class Room extends EventEmitter {
         this.clients.push(client);
     }
     addMessage(message) {
-        this.messages.push(message);
+        this.messages.push(message);``
     }
     removeClient(client) {
-        const producerId = client.producer?.audio?.id;
-        if (producerId) {
-            //console.log("activeSpeakerObserver removeProducer:", producerId);
-            this.activeSpeakerObserver?.removeProducer({ producerId });
-            this.activeSpeakerList = this.activeSpeakerList.filter((ac) => ac !== producerId);
-            this.updateActiveSpeakers();
+        try{
+            //const producerId = client.producer?.audio?.id;
+            const producerId = this.activeSpeakerList.find(c => c === client.producer?.audio?.id)
+            if (producerId) {
+                //console.log("activeSpeakerObserver removeProducer:", producerId);
+                this.activeSpeakerObserver?.removeProducer({ producerId });
+                this.activeSpeakerList = this.activeSpeakerList.filter((ac) => ac !== producerId);
+                this.updateActiveSpeakers();
+            }
+            this.clients = this.clients.filter((c) => c.id !== client.id);    
+        } catch(error){
+            console.log(error)
         }
-        this.clients = this.clients.filter((c) => c.id !== client.id);
     }
     createRouter() {
         return new Promise(async (resolve, _reject) => {
