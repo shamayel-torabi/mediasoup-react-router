@@ -5,7 +5,7 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import type { Route } from "./+types/_main.room.$roomId";
 import { redirect } from "react-router";
-import { Video, Pause, Play, MonitorPlay, Cable } from 'lucide-react';
+import { Video, Pause, Play, MonitorPlay } from 'lucide-react';
 import { toast } from "sonner";
 
 export async function loader({ params }: Route.LoaderArgs) {
@@ -36,16 +36,16 @@ export default function RoomPage({ loaderData }: Route.ComponentProps) {
 
     //console.log('consumer', consumer)
 
-    for (const [aid, consumer] of Object.entries(consumers)){
+    for (const [aid, consumer] of Object.entries(consumers)) {
       console.log('aid', aid),
-      console.log('consumer:', consumer)
+        console.log('consumer:', consumer)
       if (remoteMedia.current && aid === activeSpeakers[0]) {
         remoteMedia.current.srcObject = consumer?.combinedStream;
       }
     }
 
 
-    
+
     // for (let el of remoteVideos) {
     //   el.srcObject = null; //clear out the <video>
     // }
@@ -60,16 +60,16 @@ export default function RoomPage({ loaderData }: Route.ComponentProps) {
     //     slot++; //for the next
     //   }
     // });
-  },[consumers, activeSpeakers])
+  }, [consumers, activeSpeakers])
 
   const handleJoin = useCallback(async () => {
     try {
       await joinRoom(roomId);
-      setJoined(true); 
+      setJoined(true);
     } catch (error) {
-      toast.error('خطا هنگام پیوستن به نشست!')      
+      toast.error('خطا هنگام پیوستن به نشست!')
     }
-  },[roomId])
+  }, [roomId])
 
   useEffect(() => {
     if (roomId)
@@ -122,20 +122,16 @@ export default function RoomPage({ loaderData }: Route.ComponentProps) {
   }
 
   return (
-    <div className="grid grid-cols-[1fr_20rem] min-w-5xl">
-      <Card className="my-2 ms-2">
-        <CardContent className="p-2 py-2 grid grid-cols-[1fr_16rem] gap-2" >
-          <div className="grid grid-flow-row justify-items-center">
-            <div className="w-full">
-              <div className="grid grid-flow-row justify-items-center gap-0.5">
-                <video ref={remoteMedia} className="w-[80%] aspect-video" autoPlay controls playsInline></video>
-              </div>
+    <div className="grid grid-cols-[1fr_20rem] min-w-5xl gap-1 p-2">
+      <Card className="p-0 h-(--page--height)">
+        <CardContent className="grid grid-rows-[1fr_10rem] gap-1" >
+          <div className="p-1 grid grid-rows-[1fr_3rem] items-center">
+            <div className="mb-6 mx-auto h-(--video--height)">
+              <div className=" text-center">Name</div>
+              <video ref={remoteMedia} className="h-full aspect-video" autoPlay controls playsInline></video>
             </div>
-            <div className="grid items-center">
+            <div className="grid justify-center py-2">
               <div className="space-x-1">
-                {/* <Button variant="outline" disabled={joined} onClick={handleJoin}>
-                  <Cable color="red" size={48} />
-                </Button> */}
                 <Button variant="outline" disabled={!joined} onClick={() => handlePublish('camera')}>
                   <Video color="red" size={48} />
                 </Button>
@@ -148,10 +144,26 @@ export default function RoomPage({ loaderData }: Route.ComponentProps) {
               </div>
             </div>
           </div>
-          <div className="grid justify-self-start items-start gap-2">
-            <div className="h-32 grid grid-flow-row justify-items-center gap-1 border p-1">
-              <video ref={localMedia} className="aspect-video" muted autoPlay></video>
-              <p className="text-center">من</p>
+          <div className="grid grid-cols-5 gap-2">
+            <div className="bg-black dark:bg-gray-300 p-2">
+              <video ref={localMedia} className="w-[16rem] aspect-video mx-auto" muted autoPlay controls playsInline></video>
+              <p className="text-center text-gray-50 dark:text-gray-600">من</p>
+            </div>
+            <div className="bg-black dark:bg-gray-300 p-2">
+              <video className="w-[16rem] aspect-video mx-auto" autoPlay controls playsInline></video>
+              <p className="text-center text-gray-50 dark:text-gray-600"></p>
+            </div>
+            <div className="bg-black dark:bg-gray-300 p-2">
+              <video className="w-[16rem] aspect-video mx-auto" autoPlay controls playsInline></video>
+              <p className="text-center text-gray-50 dark:text-gray-600"></p>
+            </div>
+            <div className="bg-black dark:bg-gray-300 p-2">
+              <video className="w-[16rem] aspect-video mx-auto" autoPlay controls playsInline></video>
+              <p className="text-center text-gray-50 dark:text-gray-600"></p>
+            </div>
+            <div className="bg-black dark:bg-gray-300 p-2">
+              <video className="w-[16rem] aspect-video mx-auto" autoPlay controls playsInline></video>
+              <p className="text-center text-gray-50 dark:text-gray-600"></p>
             </div>
           </div>
         </CardContent>
