@@ -28,7 +28,7 @@ export default function RoomPage({ loaderData }: Route.ComponentProps) {
 
   const updateRemoteVideos = useCallback(() => {
     console.log("activeSpeakers:", activeSpeakers);
-    //console.log('consumers', consumers)
+    console.log('consumers', consumers)
 
     //const aid = activeSpeakers[0];
     //console.log('aid:', aid)

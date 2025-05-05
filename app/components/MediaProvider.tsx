@@ -31,7 +31,7 @@ export enum ActionType {
     SET_ROOM_ID = 'SET_ROOM_ID',
     ADD_ROOM = 'ADD_ROOM',
     SET_ACTIVE_SPEAKERS = 'SET_ACTIVE_SPEAKERS',
-    SET_CONSUMER = 'SET_CONSUMER'
+    SET_CONSUMER = 'SET_CONSUMER',
 }
 export type Action = {
     type: ActionType;
@@ -62,7 +62,7 @@ function mediaReducer(state: MediaState, action: Action) {
         case ActionType.SET_ACTIVE_SPEAKERS:
             return { ...state, activeSpeakers: payload };
         case ActionType.SET_CONSUMER:
-            return { ...state, consumers:{...state.consumers, ...payload} };
+            return { ...state, consumers: { ...state.consumers, ...payload } };
         default:
             return state;
     }

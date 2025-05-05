@@ -348,7 +348,7 @@ export const useMediasoup = (
   };
 
   const requestTransportToConsume = (consumeData: ConsumeData) => {
-    //let consumers: Record<string, MediaConsumer> = {};
+    let consumers: Record<string, MediaConsumer> = {};
 
     //console.log('requestTransportToConsume consumeData:', consumeData)
 
@@ -382,13 +382,7 @@ export const useMediasoup = (
           videoConsumer.track,
         ]);
 
-
-        //setRemoteStreams(prev => [...prev, combinedStream])
-
-        //console.log("Hope this works...");
-
-
-        const consumer: Record<string, MediaConsumer> = {}
+        let consumer: Record<string, MediaConsumer> = {};
         consumer[audioPid] = {
           combinedStream,
           userName: consumeData.associatedUserNames[i],
@@ -402,15 +396,6 @@ export const useMediasoup = (
         console.log(error);
       }
     });
-
-    //console.log('requestTransportToConsume consumers:', consumers)
-
-    //dispatch({ type: ActionType.SET_CONSUMERS, payload: consumers });
-
-    // dispatch({
-    //   type: ActionType.SET_ACTIVE_SPEAKERS,
-    //   payload: consumeData.audioPidsToCreate,
-    // });
   };
 
   const joinMediaSoupRoom = (userName: string, roomId: string) => {
@@ -451,9 +436,7 @@ export const useMediasoup = (
           associatedUserNames: joinRoomResp.result?.associatedUserNames!,
         };
 
-        const consumers = requestTransportToConsume(consumeData);
-
-
+        requestTransportToConsume(consumeData);
         resolve();
       }
     });
