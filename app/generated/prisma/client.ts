@@ -43,7 +43,7 @@ const config: runtime.GetPrismaClientConfig = {
       "value": "prisma-client"
     },
     "output": {
-      "value": "E:\\Mediasoup\\mediasoup-react-router\\app\\generated\\prisma",
+      "value": "E:\\Meet\\mediasoup\\mediasoup-react-router\\app\\generated\\prisma",
       "fromEnvVar": null
     },
     "config": {
@@ -57,7 +57,7 @@ const config: runtime.GetPrismaClientConfig = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "E:\\Mediasoup\\mediasoup-react-router\\prisma\\schema.prisma",
+    "sourceFilePath": "E:\\Meet\\mediasoup\\mediasoup-react-router\\prisma\\schema.prisma",
     "isCustomOutput": true
   },
   "relativePath": "../../../prisma",
@@ -67,16 +67,17 @@ const config: runtime.GetPrismaClientConfig = {
     "db"
   ],
   "activeProvider": "sqlite",
+  "postinstall": false,
   "inlineDatasources": {
     "db": {
       "url": {
-        "fromEnvVar": "DATABASE_URL",
+        "fromEnvVar": null,
         "value": "file:./dev.db"
       }
     }
   },
-  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\ngenerator client {\n  provider = \"prisma-client\"\n  output   = \"../app/generated/prisma\"\n}\n\ndatasource db {\n  provider = \"sqlite\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel User {\n  id        String         @id @default(uuid())\n  email     String         @unique\n  password  String\n  role      String\n  firstName String\n  lastName  String\n  image     String?\n  createdAt DateTime       @default(now())\n  updatedAt DateTime       @updatedAt\n  sessions  SessionUsers[]\n}\n\nmodel SessionUsers {\n\n  assignedAt DateTime @default(now())\n  instructor Boolean  @default(false)\n\n  userId String\n  user   User   @relation(fields: [userId], references: [id])\n\n  sessionId String\n  session   Session @relation(fields: [sessionId], references: [id])\n\n  @@id([userId, sessionId])\n}\n\nmodel Session {\n  id          String         @id @default(uuid())\n  title       String\n  description String\n  published   Boolean        @default(false)\n  startedAt   DateTime       @default(now())\n  users       SessionUsers[]\n}\n",
-  "inlineSchemaHash": "0dbc183d5d14714473c39891a8b86ffc89b85c219a90e5be804d87154b96eb8b",
+  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\ngenerator client {\n  provider = \"prisma-client\"\n  output   = \"../app/generated/prisma\"\n}\n\ndatasource db {\n  provider = \"sqlite\"\n  //url      = env(\"DATABASE_URL\")\n  url      = \"file:./dev.db\"\n}\n\nmodel User {\n  id        String         @id @default(uuid())\n  email     String         @unique\n  password  String\n  role      String\n  firstName String\n  lastName  String\n  image     String?\n  createdAt DateTime       @default(now())\n  updatedAt DateTime       @updatedAt\n  sessions  SessionUsers[]\n}\n\nmodel SessionUsers {\n\n  assignedAt DateTime @default(now())\n  instructor Boolean  @default(false)\n\n  userId String\n  user   User   @relation(fields: [userId], references: [id])\n\n  sessionId String\n  session   Session @relation(fields: [sessionId], references: [id])\n\n  @@id([userId, sessionId])\n}\n\nmodel Session {\n  id          String         @id @default(uuid())\n  title       String\n  description String\n  published   Boolean        @default(false)\n  startedAt   DateTime       @default(now())\n  users       SessionUsers[]\n}\n",
+  "inlineSchemaHash": "a30c22c52fe56f081f419999d296946b6eb0b08c5b5c0529d1dd4fd063fdfa3a",
   "copyEngine": true,
   "runtimeDataModel": {
     "models": {},

@@ -51,9 +51,8 @@ export default function RoomPage({ loaderData }: Route.ComponentProps) {
   }
 
   const handleJoin = async () => {
-    if (await joinRoom(roomId)) {
-      setJoined(true);
-    }
+    await joinRoom(roomId);
+    setJoined(true);
   }
 
   useEffect(() => {
@@ -63,7 +62,7 @@ export default function RoomPage({ loaderData }: Route.ComponentProps) {
 
   useEffect(() => {
     updateRemoteVideos(activeSpeakers);
-  }, [consumers, activeSpeakers]);
+  }, [activeSpeakers]);
 
 
 

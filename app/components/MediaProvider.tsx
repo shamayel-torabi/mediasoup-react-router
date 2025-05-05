@@ -1,6 +1,7 @@
 import {
     createContext,
     useContext,
+    useEffect,
     useReducer,
 } from 'react'
 
@@ -16,7 +17,7 @@ type MediaContextType = {
     consumers: Record<string, MediaConsumer>
     creatRoom: (roomName: string) => Promise<string>
     sendMessage: (text: string) => Promise<void>,
-    joinRoom: (roomId: string) => Promise<boolean>,
+    joinRoom: (roomId: string) => Promise<void>,
     startPublish: (localStream: MediaStream) => Promise<void>,
     audioChange: () => boolean,
 }
@@ -88,6 +89,21 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
         audioChange
     } = useMediasoup(dispatch);
 
+    useEffect(() => {
+        const join = () => {
+            try {
+                joinMediaSoupRoom(user?.email!, state.roomId);
+                toast.success('پیوستن به نشست');
+            } catch (error) {
+                toast.error('خطا هنگام پیوستن به نشست!')
+            }
+        }
+
+        if (state.roomId && user?.email){
+            join();
+        }
+    }, [state.roomId]);
+
 
     const sendMessage = async (text: string) => {
         if (state.roomId) {
@@ -97,23 +113,12 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
     }
 
     const joinRoom = async (roomId: string) => {
-        console.log('roomId:', roomId);
-        try {
-            await joinMediaSoupRoom(user?.email!, roomId);
-            dispatch({ type: ActionType.SET_ROOM_ID, payload: roomId });
-            toast.success('پیوستن به نشست')
-            return true;
-
-        } catch (error) {
-            console.log(error)
-            toast.error('خطا هنگام پیوستن به نشست!')
-            return false;
-        }
+        dispatch({ type: ActionType.SET_ROOM_ID, payload: roomId });
     }
 
     const creatRoom = async (roomName: string) => {
-        const r = await createMediaSoupRoom(roomName);
-        return r || '';
+        const roomId = await createMediaSoupRoom(roomName);
+        return roomId || '';
     }
 
     const contextValue: MediaContextType = {
