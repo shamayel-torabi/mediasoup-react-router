@@ -92,7 +92,7 @@ interface ServerToClientEvents {
   newMessage: (message: Message) => void;
   newRoom: (room: { roomId: string; roomName: string }) => void;
   newProducersToConsume: (consumeData: ConsumeData) => void;
-  updateActiveSpeakers: (newListOfActives: string[]) => Promise<void>;
+  updateActiveSpeakers: (newListOfActives: string[]) => void;
 }
 
 export const useMediasoup = (
@@ -125,13 +125,11 @@ export const useMediasoup = (
 
     clientSocket.on("newProducersToConsume", (consumeData) => {
       requestTransportToConsume(consumeData);
+      updatActiveSpeakers(consumeData.audioPidsToCreate);
     });
 
-    clientSocket.on("updateActiveSpeakers", async (newListOfActives) => {
-      dispatch({
-        type: ActionType.SET_ACTIVE_SPEAKERS,
-        payload: newListOfActives,
-      });
+    clientSocket.on("updateActiveSpeakers", (newListOfActives) => {
+      updatActiveSpeakers(newListOfActives);
     });
 
     setSocket(clientSocket);
@@ -348,13 +346,7 @@ export const useMediasoup = (
   };
 
   const requestTransportToConsume = (consumeData: ConsumeData) => {
-    let consumers: Record<string, MediaConsumer> = {};
-
-    //console.log('requestTransportToConsume consumeData:', consumeData)
-
-
     consumeData.audioPidsToCreate.forEach(async (audioPid, i) => {
-
       try {
         const videoPid = consumeData.videoPidsToCreate[i];
 
@@ -363,9 +355,12 @@ export const useMediasoup = (
           { type: "consumer", audioPid }
         );
         //console.log('requestTransportToConsume consumerTransportParams:', consumerTransportParams);
-  
+
+        if (!consumerTransportParams)
+          throw new Error("consumerTransportParams undefined");
+
         const consumerTransport = createConsumerTransport(
-          consumerTransportParams!,
+          consumerTransportParams,
           audioPid
         );
 
@@ -382,7 +377,7 @@ export const useMediasoup = (
           videoConsumer.track,
         ]);
 
-        let consumer: Record<string, MediaConsumer> = {};
+        const consumer: Record<string, MediaConsumer> = {};
         consumer[audioPid] = {
           combinedStream,
           userName: consumeData.associatedUserNames[i],
@@ -391,10 +386,21 @@ export const useMediasoup = (
           videoConsumer: videoConsumer,
         };
 
-        dispatch({ type: ActionType.SET_CONSUMER, payload: consumer })
+        dispatch({ type: ActionType.SET_CONSUMER, payload: consumer });
       } catch (error) {
-        console.log(error);
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "requestTransportToConsume error";
+        console.log(errorMessage);
       }
+    });
+  };
+
+  const updatActiveSpeakers = (newListOfActives: string[]) => {
+    dispatch({
+      type: ActionType.SET_ACTIVE_SPEAKERS,
+      payload: newListOfActives,
     });
   };
 
@@ -437,6 +443,7 @@ export const useMediasoup = (
         };
 
         requestTransportToConsume(consumeData);
+        updatActiveSpeakers(consumeData.audioPidsToCreate);
         resolve();
       }
     });

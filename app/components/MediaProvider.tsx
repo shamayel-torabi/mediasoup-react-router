@@ -5,21 +5,23 @@ import {
     useReducer,
 } from 'react'
 
-import { type MediaConsumer, type Message, type RoomType } from '~/types';
+import { type ConsumerType, type MediaConsumer, type Message, type RoomType } from '~/types';
 import { useUserContext } from './UserProvider';
 import { toast } from 'sonner';
 import { useMediasoup } from '~/hooks/useMediasoup';
+
 
 type MediaContextType = {
     messages: Message[];
     rooms: RoomType[];
     activeSpeakers: string[];
-    consumers: Record<string, MediaConsumer>
-    creatRoom: (roomName: string) => Promise<string>
-    sendMessage: (text: string) => Promise<void>,
-    joinRoom: (roomId: string) => Promise<void>,
-    startPublish: (localStream: MediaStream) => Promise<void>,
-    audioChange: () => boolean,
+    consumers: Record<string, MediaConsumer>;
+    userName: string;
+    creatRoom: (roomName: string) => Promise<string>;
+    sendMessage: (text: string) => Promise<void>;
+    joinRoom: (roomId: string) => Promise<void>;
+    startPublish: (localStream: MediaStream) => Promise<void>;
+    audioChange: () => boolean;
 }
 
 const MediaContext = createContext<MediaContextType>({} as MediaContextType)
@@ -31,7 +33,7 @@ export enum ActionType {
     SET_ROOM_ID = 'SET_ROOM_ID',
     ADD_ROOM = 'ADD_ROOM',
     SET_ACTIVE_SPEAKERS = 'SET_ACTIVE_SPEAKERS',
-    SET_CONSUMER = 'SET_CONSUMER',
+    SET_CONSUMER = 'SET_CONSUMER'
 }
 export type Action = {
     type: ActionType;
@@ -78,6 +80,7 @@ const initState: MediaState = {
 
 export default function MediaProvider({ children }: Readonly<{ children: React.ReactNode }>) {
     const { user } = useUserContext();
+    const userName = `${user?.firstName} ${user?.lastName}`;
     const [state, dispatch] = useReducer(mediaReducer, initState);
 
     const {
@@ -88,10 +91,11 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
         audioChange
     } = useMediasoup(dispatch);
 
+
     useEffect(() => {
-        const join = () => {
+        const join = (userName: string, roomId: string) => {
             try {
-                joinMediaSoupRoom(user?.email!, state.roomId);
+                joinMediaSoupRoom(userName, roomId);
                 toast.success('پیوستن به نشست');
             } catch (error) {
                 toast.error('خطا هنگام پیوستن به نشست!')
@@ -99,14 +103,12 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
         }
 
         if (state.roomId && user?.email) {
-            join();
+            join(user.email, state.roomId);
         }
     }, [state.roomId]);
 
-
     const sendMessage = async (text: string) => {
         if (state.roomId) {
-            const userName = `${user?.firstName} ${user?.lastName}`;
             socketSendMessage(text, userName, state.roomId);
         }
     }
@@ -122,6 +124,7 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
 
     const contextValue: MediaContextType = {
         ...state,
+        userName,
         sendMessage,
         creatRoom,
         joinRoom,

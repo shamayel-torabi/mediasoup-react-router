@@ -1,12 +1,31 @@
 import Chat from "~/components/Chat";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useMediaContext } from "~/components/MediaProvider";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import type { Route } from "./+types/_main.room.$roomId";
 import { redirect } from "react-router";
-import { Video, Pause, Play, MonitorPlay } from 'lucide-react';
+import { Pause, Play, MonitorPlay, Video } from 'lucide-react';
 import { toast } from "sonner";
+import VideoBox from "~/components/VideoBox";
+
+type MediaType = {
+  userName?: string;
+  mediaStream?: MediaStream;
+}
+
+const MainVideo = memo(({ source }: { source: MediaType }) => {
+
+  return (
+    <VideoBox
+      source={source?.mediaStream}
+      userName={source?.userName}
+      vidClass="h-full"
+      divClass="mb-6 mx-auto h-(--video--height)"
+      autoPlay controls playsInline />
+  )
+});
+
 
 export async function loader({ params }: Route.LoaderArgs) {
   //const searchParams = new URL(request.url).searchParams;
@@ -17,50 +36,25 @@ export async function loader({ params }: Route.LoaderArgs) {
   return { roomId }
 }
 
+
 export default function RoomPage({ loaderData }: Route.ComponentProps) {
-  const { consumers, activeSpeakers, joinRoom, audioChange, startPublish } = useMediaContext();
+  const {
+    userName,
+    activeSpeakers,
+    consumers,
+    joinRoom,
+    audioChange,
+    startPublish
+  } = useMediaContext();
+
+  const roomId = loaderData.roomId;
+
   const [pause, setPause] = useState(true);
   const [joined, setJoined] = useState(false);
   const [published, setPublished] = useState(false);
+  const [mediaConsumers, setMediaConsumers] = useState<MediaType[]>([])
+
   const localMedia = useRef<HTMLVideoElement>(null);
-  const remoteMedia = useRef<HTMLVideoElement>(null);
-  const roomId = loaderData.roomId;
-
-  const updateRemoteVideos = useCallback(() => {
-    console.log("activeSpeakers:", activeSpeakers);
-    console.log('consumers', consumers)
-
-    //const aid = activeSpeakers[0];
-    //console.log('aid:', aid)
-    //const consumer = consumers[aid];
-
-    //console.log('consumer', consumer)
-
-    for (const [aid, consumer] of Object.entries(consumers)) {
-      console.log('aid', aid),
-        console.log('consumer:', consumer)
-      if (remoteMedia.current && aid === activeSpeakers[0]) {
-        remoteMedia.current.srcObject = consumer?.combinedStream;
-      }
-    }
-
-
-
-    // for (let el of remoteVideos) {
-    //   el.srcObject = null; //clear out the <video>
-    // }
-
-    // let slot = 0;
-    // newListOfActives.forEach((aid) => {
-    //   if (aid !== audioProducer?.id) {
-    //     const consumer = consumers[aid];
-
-    //     remoteVideos[slot].srcObject = consumer?.combinedStream;
-    //     remoteUserNames[slot] = consumer?.userName;
-    //     slot++; //for the next
-    //   }
-    // });
-  }, [consumers, activeSpeakers])
 
   const handleJoin = useCallback(async () => {
     try {
@@ -77,8 +71,17 @@ export default function RoomPage({ loaderData }: Route.ComponentProps) {
   }, []);
 
   useEffect(() => {
-    updateRemoteVideos();
-  }, [consumers]);
+    activeSpeakers.map(aid => {
+      const consumer = consumers[aid];
+      if (consumer) {
+        setMediaConsumers(prev => [...prev, {
+          userName: consumer.userName,
+          mediaStream: consumer.combinedStream
+        }])
+      }
+    })
+  }, [consumers, activeSpeakers]);
+
 
   const handlePublish = async (source: 'camera' | 'desktop') => {
     let localStream: MediaStream | null;
@@ -121,15 +124,46 @@ export default function RoomPage({ loaderData }: Route.ComponentProps) {
     setPause(result)
   }
 
+  // const renderMainVideo = useCallback(() => {
+  //   //console.log('consumers:', mediaConsumers)
+
+  //   const consumer = mediaConsumers[0];
+
+  //   return (
+  //     <VideoBox
+  //       source={consumer?.mediaStream}
+  //       userName={consumer?.userName}
+  //       vidClass="h-full"
+  //       divClass="mb-6 mx-auto h-(--video--height)"
+  //       autoPlay controls playsInline />
+  //   )
+  // }, [mediaConsumers]);
+
+  const renderRemoteVideo = useCallback(() => {
+
+    return mediaConsumers.map((consumer, index) => {
+      if (index === 0)
+        return null;
+
+      return (
+        <VideoBox
+          key={index}
+          source={consumer?.mediaStream}
+          userName={consumer?.userName}
+          vidClass="w-[16rem]"
+          divClass="bg-black dark:bg-gray-300 p-2"
+          autoPlay controls playsInline />
+      )
+    });
+
+  }, [mediaConsumers]);
+
   return (
     <div className="grid grid-cols-[1fr_20rem] min-w-5xl gap-1 p-2">
       <Card className="p-0 h-(--page--height)">
         <CardContent className="grid grid-rows-[1fr_10rem] gap-1" >
           <div className="p-1 grid grid-rows-[1fr_3rem] items-center">
-            <div className="mb-6 mx-auto h-(--video--height)">
-              <div className=" text-center">Name</div>
-              <video ref={remoteMedia} className="h-full aspect-video" autoPlay controls playsInline></video>
-            </div>
+            <MainVideo source={mediaConsumers[0]}/>
             <div className="grid justify-center py-2">
               <div className="space-x-1">
                 <Button variant="outline" disabled={!joined} onClick={() => handlePublish('camera')}>
@@ -147,9 +181,10 @@ export default function RoomPage({ loaderData }: Route.ComponentProps) {
           <div className="grid grid-cols-5 gap-2">
             <div className="bg-black dark:bg-gray-300 p-2">
               <video ref={localMedia} className="w-[16rem] aspect-video mx-auto" muted autoPlay controls playsInline></video>
-              <p className="text-center text-gray-50 dark:text-gray-600">من</p>
+              <p className="text-center text-gray-50 dark:text-gray-600">{userName}</p>
             </div>
-            <div className="bg-black dark:bg-gray-300 p-2">
+            {renderRemoteVideo()}
+            {/* <div className="bg-black dark:bg-gray-300 p-2">
               <video className="w-[16rem] aspect-video mx-auto" autoPlay controls playsInline></video>
               <p className="text-center text-gray-50 dark:text-gray-600"></p>
             </div>
@@ -164,7 +199,7 @@ export default function RoomPage({ loaderData }: Route.ComponentProps) {
             <div className="bg-black dark:bg-gray-300 p-2">
               <video className="w-[16rem] aspect-video mx-auto" autoPlay controls playsInline></video>
               <p className="text-center text-gray-50 dark:text-gray-600"></p>
-            </div>
+            </div> */}
           </div>
         </CardContent>
       </Card>
