@@ -139,6 +139,13 @@ export const useMediasoup = (
     };
   }, []);
 
+  const updatActiveSpeakers = (newListOfActives: string[]) => {
+    dispatch({
+      type: ActionType.SET_ACTIVE_SPEAKERS,
+      payload: newListOfActives,
+    });
+  };
+
   const socketSendMessage = async (
     text: string,
     userName: string,
@@ -396,14 +403,7 @@ export const useMediasoup = (
       }
     });
   };
-
-  const updatActiveSpeakers = (newListOfActives: string[]) => {
-    dispatch({
-      type: ActionType.SET_ACTIVE_SPEAKERS,
-      payload: newListOfActives,
-    });
-  };
-
+  
   const joinMediaSoupRoom = (userName: string, roomId: string) => {
     return new Promise<void>(async (resolve, reject) => {
       //console.log("joinMediaSoupRoom:", { userName, roomId });
@@ -421,10 +421,10 @@ export const useMediasoup = (
           type: ActionType.SET_MESSAGES,
           payload: joinRoomResp.result?.messages,
         });
-        dispatch({
-          type: ActionType.SET_ACTIVE_SPEAKERS,
-          payload: joinRoomResp.result?.audioPidsToCreate,
-        });
+        // dispatch({
+        //   type: ActionType.SET_ACTIVE_SPEAKERS,
+        //   payload: joinRoomResp.result?.audioPidsToCreate,
+        // });
 
         try {
           device.current = new Device();
@@ -443,7 +443,7 @@ export const useMediasoup = (
         };
 
         requestTransportToConsume(consumeData);
-        updatActiveSpeakers(consumeData.audioPidsToCreate);
+        updatActiveSpeakers(joinRoomResp.result?.audioPidsToCreate!);
         resolve();
       }
     });

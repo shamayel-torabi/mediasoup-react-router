@@ -1,5 +1,5 @@
 import Chat from "~/components/Chat";
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useMediaContext } from "~/components/MediaProvider";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
@@ -14,17 +14,17 @@ type MediaType = {
   mediaStream?: MediaStream;
 }
 
-const MainVideo = memo(({ source }: { source: MediaType }) => {
+// const MainVideo = memo(({ source }: { source: MediaType }) => {
 
-  return (
-    <VideoBox
-      source={source?.mediaStream}
-      userName={source?.userName}
-      vidClass="h-full"
-      divClass="mb-6 mx-auto h-(--video--height)"
-      autoPlay controls playsInline />
-  )
-});
+//   return (
+//     <VideoBox
+//       source={source?.mediaStream}
+//       userName={source?.userName}
+//       vidClass="h-full"
+//       divClass="mb-6 mx-auto h-(--video--height)"
+//       autoPlay controls playsInline />
+//   )
+// });
 
 
 export async function loader({ params }: Route.LoaderArgs) {
@@ -71,16 +71,14 @@ export default function RoomPage({ loaderData }: Route.ComponentProps) {
   }, []);
 
   useEffect(() => {
-    activeSpeakers.map(aid => {
+    activeSpeakers.forEach(aid => {
       const consumer = consumers[aid];
-      if (consumer) {
-        setMediaConsumers(prev => [...prev, {
-          userName: consumer.userName,
-          mediaStream: consumer.combinedStream
-        }])
-      }
+      setMediaConsumers(prev => [...prev, {
+        userName: consumer?.userName,
+        mediaStream: consumer?.combinedStream
+      }])
     })
-  }, [consumers, activeSpeakers]);
+  }, [activeSpeakers]);
 
 
   const handlePublish = async (source: 'camera' | 'desktop') => {
@@ -124,20 +122,20 @@ export default function RoomPage({ loaderData }: Route.ComponentProps) {
     setPause(result)
   }
 
-  // const renderMainVideo = useCallback(() => {
-  //   //console.log('consumers:', mediaConsumers)
+  const renderMainVideo = useCallback(() => {
+    //console.log('consumers:', mediaConsumers)
 
-  //   const consumer = mediaConsumers[0];
+    const consumer = mediaConsumers[0];
 
-  //   return (
-  //     <VideoBox
-  //       source={consumer?.mediaStream}
-  //       userName={consumer?.userName}
-  //       vidClass="h-full"
-  //       divClass="mb-6 mx-auto h-(--video--height)"
-  //       autoPlay controls playsInline />
-  //   )
-  // }, [mediaConsumers]);
+    return (
+      <VideoBox
+        source={consumer?.mediaStream}
+        userName={consumer?.userName}
+        vidClass="h-full"
+        divClass="mb-6 mx-auto h-(--video--height)"
+        autoPlay controls playsInline />
+    )
+  }, [mediaConsumers]);
 
   const renderRemoteVideo = useCallback(() => {
 
@@ -163,7 +161,7 @@ export default function RoomPage({ loaderData }: Route.ComponentProps) {
       <Card className="p-0 h-(--page--height)">
         <CardContent className="grid grid-rows-[1fr_10rem] gap-1" >
           <div className="p-1 grid grid-rows-[1fr_3rem] items-center">
-            <MainVideo source={mediaConsumers[0]}/>
+            {renderMainVideo()}
             <div className="grid justify-center py-2">
               <div className="space-x-1">
                 <Button variant="outline" disabled={!joined} onClick={() => handlePublish('camera')}>
