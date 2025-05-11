@@ -4,7 +4,6 @@ import type {
   IceCandidate,
   IceParameters,
   MediaKind,
-  RtpCapabilities,
   RtpParameters,
   Transport,
 } from "mediasoup-client/types";
@@ -27,12 +26,9 @@ export type User = {
 };
 
 export type MediaConsumer = {
-  combinedStream: MediaStream;
-  userName: string;
-  consumerTransport: Transport;
-  audioConsumer: Consumer;
-  videoConsumer: Consumer;
-};
+  userName?: string;
+  mediaStream?: MediaStream;
+}
 
 export type ConsumeData = {
   audioPidsToCreate: string[];

@@ -15,10 +15,11 @@ import { ActionType, type Action } from "~/components/MediaProvider";
 import type {
   Message,
   ConsumeData,
-  MediaConsumer,
   ClientTransportOptions,
   ClientParamsType,
   RoomType,
+  ConsumerType,
+  MediaConsumer,
 } from "~/types";
 
 interface ClientToServerEvents {
@@ -105,6 +106,7 @@ export const useMediasoup = (
   const producerTransport = useRef<Transport>(null);
   const audioProducer = useRef<Producer>(null);
   const videoProducer = useRef<Producer>(null);
+  const consumers = useRef<Record<string, ConsumerType>>({});
 
   useEffect(() => {
     const clientSocket: Socket<ServerToClientEvents, ClientToServerEvents> =
@@ -140,10 +142,22 @@ export const useMediasoup = (
   }, []);
 
   const updatActiveSpeakers = (newListOfActives: string[]) => {
-    dispatch({
-      type: ActionType.SET_ACTIVE_SPEAKERS,
-      payload: newListOfActives,
+    console.log('consumers:', consumers.current)
+
+    const mediaConsumers = newListOfActives.map((aid) => {
+      if (aid !== audioProducer.current?.id) {
+        const consumer = consumers.current[aid];
+        return {
+          userName: consumer?.userName,
+          mediaStream: consumer?.combinedStream
+        } as MediaConsumer;
+      }
     });
+
+    dispatch({
+      type: ActionType.SET_MEDIA_CONSUMERS,
+      payload: mediaConsumers
+    })
   };
 
   const socketSendMessage = async (
@@ -361,7 +375,6 @@ export const useMediasoup = (
           "requestTransport",
           { type: "consumer", audioPid }
         );
-        //console.log('requestTransportToConsume consumerTransportParams:', consumerTransportParams);
 
         if (!consumerTransportParams)
           throw new Error("consumerTransportParams undefined");
@@ -384,8 +397,7 @@ export const useMediasoup = (
           videoConsumer.track,
         ]);
 
-        const consumer: Record<string, MediaConsumer> = {};
-        consumer[audioPid] = {
+        consumers.current[audioPid] = {
           combinedStream,
           userName: consumeData.associatedUserNames[i],
           consumerTransport,
@@ -393,7 +405,6 @@ export const useMediasoup = (
           videoConsumer: videoConsumer,
         };
 
-        dispatch({ type: ActionType.SET_CONSUMER, payload: consumer });
       } catch (error) {
         const errorMessage =
           error instanceof Error
@@ -403,7 +414,7 @@ export const useMediasoup = (
       }
     });
   };
-  
+
   const joinMediaSoupRoom = (userName: string, roomId: string) => {
     return new Promise<void>(async (resolve, reject) => {
       //console.log("joinMediaSoupRoom:", { userName, roomId });
@@ -421,10 +432,6 @@ export const useMediasoup = (
           type: ActionType.SET_MESSAGES,
           payload: joinRoomResp.result?.messages,
         });
-        // dispatch({
-        //   type: ActionType.SET_ACTIVE_SPEAKERS,
-        //   payload: joinRoomResp.result?.audioPidsToCreate,
-        // });
 
         try {
           device.current = new Device();

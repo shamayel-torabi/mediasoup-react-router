@@ -5,7 +5,7 @@ import {
     useReducer,
 } from 'react'
 
-import { type ConsumerType, type MediaConsumer, type Message, type RoomType } from '~/types';
+import { type MediaConsumer, type Message, type RoomType } from '~/types';
 import { useUserContext } from './UserProvider';
 import { toast } from 'sonner';
 import { useMediasoup } from '~/hooks/useMediasoup';
@@ -14,8 +14,7 @@ import { useMediasoup } from '~/hooks/useMediasoup';
 type MediaContextType = {
     messages: Message[];
     rooms: RoomType[];
-    activeSpeakers: string[];
-    consumers: Record<string, MediaConsumer>;
+    consumers: MediaConsumer[];
     userName: string;
     creatRoom: (roomName: string) => Promise<string>;
     sendMessage: (text: string) => Promise<void>;
@@ -32,8 +31,7 @@ export enum ActionType {
     SET_ROOMS = 'SET_ROOMS',
     SET_ROOM_ID = 'SET_ROOM_ID',
     ADD_ROOM = 'ADD_ROOM',
-    SET_ACTIVE_SPEAKERS = 'SET_ACTIVE_SPEAKERS',
-    SET_CONSUMER = 'SET_CONSUMER'
+    SET_MEDIA_CONSUMERS = 'SET_MEDIA_CONSUMERS'
 }
 export type Action = {
     type: ActionType;
@@ -44,8 +42,7 @@ type MediaState = {
     roomId: string;
     messages: Message[];
     rooms: RoomType[];
-    activeSpeakers: string[];
-    consumers: Record<string, MediaConsumer>
+    consumers: MediaConsumer[]
 }
 
 function mediaReducer(state: MediaState, action: Action) {
@@ -61,10 +58,8 @@ function mediaReducer(state: MediaState, action: Action) {
             return { ...state, roomId: payload };
         case ActionType.ADD_ROOM:
             return { ...state, rooms: [...state.rooms, payload] };
-        case ActionType.SET_ACTIVE_SPEAKERS:
-            return { ...state, activeSpeakers: payload };
-        case ActionType.SET_CONSUMER:
-            return { ...state, consumers: { ...state.consumers, ...payload } };
+        case ActionType.SET_MEDIA_CONSUMERS:
+            return { ...state, consumers: payload };
         default:
             return state;
     }
@@ -74,8 +69,7 @@ const initState: MediaState = {
     roomId: '',
     messages: [],
     rooms: [],
-    activeSpeakers: [],
-    consumers: {},
+    consumers: [],
 }
 
 export default function MediaProvider({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -141,7 +135,7 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
 export const useMediaContext = () => {
     const context = useContext(MediaContext);
     if (!context) {
-        throw new Error('MediaProvider not set');
+        throw new Error('useMediaContext must be used within MediaProvider');
     }
 
     return context;

@@ -40,7 +40,6 @@ export async function loader({ params }: Route.LoaderArgs) {
 export default function RoomPage({ loaderData }: Route.ComponentProps) {
   const {
     userName,
-    activeSpeakers,
     consumers,
     joinRoom,
     audioChange,
@@ -71,14 +70,13 @@ export default function RoomPage({ loaderData }: Route.ComponentProps) {
   }, []);
 
   useEffect(() => {
-    activeSpeakers.forEach(aid => {
-      const consumer = consumers[aid];
+    consumers.forEach(consumer => {
       setMediaConsumers(prev => [...prev, {
         userName: consumer?.userName,
-        mediaStream: consumer?.combinedStream
+        mediaStream: consumer?.mediaStream
       }])
     })
-  }, [activeSpeakers]);
+  }, [consumers]);
 
 
   const handlePublish = async (source: 'camera' | 'desktop') => {
@@ -123,7 +121,7 @@ export default function RoomPage({ loaderData }: Route.ComponentProps) {
   }
 
   const renderMainVideo = useCallback(() => {
-    //console.log('consumers:', mediaConsumers)
+    //console.log('mediaConsumers:', mediaConsumers)
 
     const consumer = mediaConsumers[0];
 
