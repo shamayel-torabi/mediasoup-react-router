@@ -15,10 +15,10 @@ import { ActionType, type Action } from "~/components/MediaProvider";
 import type {
   Message,
   ConsumeData,
-  MediaConsumer,
   ClientTransportOptions,
   ClientParamsType,
   RoomType,
+  ConsumerType,
 } from "~/types";
 
 interface ClientToServerEvents {
@@ -384,7 +384,7 @@ export const useMediasoup = (
           videoConsumer.track,
         ]);
 
-        const consumer: Record<string, MediaConsumer> = {};
+        const consumer: Record<string, ConsumerType> = {};
         consumer[audioPid] = {
           combinedStream,
           userName: consumeData.associatedUserNames[i],
@@ -403,7 +403,7 @@ export const useMediasoup = (
       }
     });
   };
-  
+
   const joinMediaSoupRoom = (userName: string, roomId: string) => {
     return new Promise<void>(async (resolve, reject) => {
       //console.log("joinMediaSoupRoom:", { userName, roomId });
@@ -421,10 +421,6 @@ export const useMediasoup = (
           type: ActionType.SET_MESSAGES,
           payload: joinRoomResp.result?.messages,
         });
-        // dispatch({
-        //   type: ActionType.SET_ACTIVE_SPEAKERS,
-        //   payload: joinRoomResp.result?.audioPidsToCreate,
-        // });
 
         try {
           device.current = new Device();
@@ -480,6 +476,7 @@ export const useMediasoup = (
   };
 
   return {
+    audioProducerId: audioProducer.current?.id,
     socketSendMessage,
     joinMediaSoupRoom,
     startPublish,

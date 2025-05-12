@@ -9,10 +9,10 @@ import { Pause, Play, MonitorPlay, Video } from 'lucide-react';
 import { toast } from "sonner";
 import VideoBox from "~/components/VideoBox";
 
-type MediaType = {
-  userName?: string;
-  mediaStream?: MediaStream;
-}
+// type MediaType = {
+//   userName?: string;
+//   mediaStream?: MediaStream;
+// }
 
 // const MainVideo = memo(({ source }: { source: MediaType }) => {
 
@@ -40,8 +40,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 export default function RoomPage({ loaderData }: Route.ComponentProps) {
   const {
     userName,
-    activeSpeakers,
-    consumers,
+    mediaConsumers,
     joinRoom,
     audioChange,
     startPublish
@@ -52,7 +51,6 @@ export default function RoomPage({ loaderData }: Route.ComponentProps) {
   const [pause, setPause] = useState(true);
   const [joined, setJoined] = useState(false);
   const [published, setPublished] = useState(false);
-  const [mediaConsumers, setMediaConsumers] = useState<MediaType[]>([])
 
   const localMedia = useRef<HTMLVideoElement>(null);
 
@@ -69,16 +67,6 @@ export default function RoomPage({ loaderData }: Route.ComponentProps) {
     if (roomId)
       handleJoin()
   }, []);
-
-  useEffect(() => {
-    activeSpeakers.forEach(aid => {
-      const consumer = consumers[aid];
-      setMediaConsumers(prev => [...prev, {
-        userName: consumer?.userName,
-        mediaStream: consumer?.combinedStream
-      }])
-    })
-  }, [activeSpeakers]);
 
 
   const handlePublish = async (source: 'camera' | 'desktop') => {
@@ -123,7 +111,7 @@ export default function RoomPage({ loaderData }: Route.ComponentProps) {
   }
 
   const renderMainVideo = useCallback(() => {
-    //console.log('consumers:', mediaConsumers)
+    //console.log('mediaConsumers:', mediaConsumers)
 
     const consumer = mediaConsumers[0];
 
