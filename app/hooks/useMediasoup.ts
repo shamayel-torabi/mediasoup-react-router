@@ -125,7 +125,7 @@ export const useMediasoup = (
 
     clientSocket.on("newProducersToConsume", (consumeData) => {
       requestTransportToConsume(consumeData);
-      updatActiveSpeakers(consumeData.audioPidsToCreate);
+      updatActiveSpeakers(consumeData.activeSpeakerList);
     });
 
     clientSocket.on("updateActiveSpeakers", (newListOfActives) => {

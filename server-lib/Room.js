@@ -143,8 +143,8 @@ export class Room extends EventEmitter {
     // based on the new activeSpeakerList. Now, send out the consumers that
     // need to be made.
     // Broadcast to this this
-    this.updateProducersToConsume(newTransportsByPeer);
     this.io.to(this.id).emit("updateActiveSpeakers", activeSpeakers);
+    this.updateProducersToConsume(newTransportsByPeer);
   }
   updateProducersToConsume(newTransportsByPeer) {
     for (const [socketId, audioPidsToCreate] of Object.entries(

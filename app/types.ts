@@ -38,6 +38,7 @@ export type ConsumeData = {
   audioPidsToCreate: string[];
   videoPidsToCreate: string[];
   associatedUserNames: string[];
+  activeSpeakerList: string[];
 };
 
 export type RemoteVideoType = {

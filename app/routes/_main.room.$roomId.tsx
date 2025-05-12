@@ -9,10 +9,6 @@ import { Pause, Play, MonitorPlay, Video } from 'lucide-react';
 import { toast } from "sonner";
 import VideoBox from "~/components/VideoBox";
 
-// type MediaType = {
-//   userName?: string;
-//   mediaStream?: MediaStream;
-// }
 
 // const MainVideo = memo(({ source }: { source: MediaType }) => {
 
@@ -54,19 +50,20 @@ export default function RoomPage({ loaderData }: Route.ComponentProps) {
 
   const localMedia = useRef<HTMLVideoElement>(null);
 
-  const handleJoin = useCallback(async () => {
-    try {
-      await joinRoom(roomId);
-      setJoined(true);
-    } catch (error) {
-      toast.error('خطا هنگام پیوستن به نشست!')
-    }
-  }, [roomId])
-
   useEffect(() => {
+    const handleJoin = async () => {
+      try {
+        await joinRoom(roomId);
+        setJoined(true);
+      } catch (error) {
+        toast.error('خطا هنگام پیوستن به نشست!')
+      }
+    };
+
     if (roomId)
-      handleJoin()
-  }, []);
+      handleJoin();
+
+  }, [roomId]);
 
 
   const handlePublish = async (source: 'camera' | 'desktop') => {
