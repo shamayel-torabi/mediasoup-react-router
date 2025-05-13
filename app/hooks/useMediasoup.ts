@@ -9,6 +9,7 @@ import {
   type Transport,
   type TransportOptions,
 } from "mediasoup-client/types";
+import { console } from "node:inspector";
 import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import { ActionType, type Action } from "~/components/MediaProvider";
@@ -101,6 +102,7 @@ export const useMediasoup = (
   const [socket, setSocket] =
     useState<Socket<ServerToClientEvents, ClientToServerEvents>>();
   const [activeSpeakers, setActiveSpeakers] = useState<string[]>([]);
+  //const [consumers, setConsumers] = useState<Record<string, ConsumerType>>({});
 
   const device = useRef<Device>(null);
   const producerTransport = useRef<Transport>(null);
@@ -126,12 +128,12 @@ export const useMediasoup = (
     });
 
     clientSocket.on("newProducersToConsume", (consumeData) => {
-      //updatActiveSpeakers(consumeData.activeSpeakerList);
+      console.log('newProducersToConsume consumeData:', consumeData)
       requestTransportToConsume(consumeData);
     });
 
     clientSocket.on("updateActiveSpeakers", (newListOfActives) => {
-      updatActiveSpeakers(newListOfActives);
+      setActiveSpeakers(newListOfActives);
     });
 
     setSocket(clientSocket);
@@ -158,10 +160,6 @@ export const useMediasoup = (
       }
     });
   }, [activeSpeakers]);
-
-  const updatActiveSpeakers = (newListOfActives: string[]) => {
-    setActiveSpeakers(newListOfActives);
-  };
 
   const socketSendMessage = async (
     text: string,
@@ -370,6 +368,8 @@ export const useMediasoup = (
   };
 
   const requestTransportToConsume = (consumeData: ConsumeData) => {
+    let cnsmrs: Record<string, ConsumerType> = {};
+
     consumeData.audioPidsToCreate.forEach(async (audioPid, i) => {
       try {
         const videoPid = consumeData.videoPidsToCreate[i];
@@ -409,7 +409,7 @@ export const useMediasoup = (
           },
         });
 
-        consumers.current[audioPid] = {
+        cnsmrs[audioPid] = {
           combinedStream,
           userName: consumeData.associatedUserNames[i],
           consumerTransport,
@@ -424,6 +424,10 @@ export const useMediasoup = (
         console.log(errorMessage);
       }
     });
+
+    //console.log('cnsmrs:', cnsmrs)
+
+    consumers.current = {...cnsmrs}
   };
 
   const joinMediaSoupRoom = (userName: string, roomId: string) => {
@@ -461,7 +465,6 @@ export const useMediasoup = (
           activeSpeakerList: joinRoomResp.result?.audioPidsToCreate!,
         };
 
-        //updatActiveSpeakers(joinRoomResp.result?.audioPidsToCreate!);
         requestTransportToConsume(consumeData);
         resolve();
       }

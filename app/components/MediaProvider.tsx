@@ -101,28 +101,6 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
         }
     }, [state.roomId]);
 
-    // useEffect(() => {
-    //     console.log('state.activeSpeakers:', state.activeSpeakers);
-    //     console.log('state.consumers', state.consumers);
-
-    //     state.activeSpeakers.forEach(aid => {
-    //         if (aid !== audioProducerId) {
-    //             const consumer = state.consumers[aid];
-
-    //             if (consumer) {
-    //                 dispatch({
-    //                     type: ActionType.SET_MEDIA_CONSUMER,
-    //                     payload: {
-    //                         userName: consumer?.userName,
-    //                         mediaStream: consumer?.combinedStream
-    //                     }
-    //                 });
-    //             }
-    //         }
-    //     });
-
-    // }, [state.activeSpeakers])
-
     const sendMessage = async (text: string) => {
         if (state.roomId) {
             socketSendMessage(text, userName, state.roomId);
