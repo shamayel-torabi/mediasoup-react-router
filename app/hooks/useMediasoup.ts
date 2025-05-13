@@ -100,11 +100,13 @@ export const useMediasoup = (
 ) => {
   const [socket, setSocket] =
     useState<Socket<ServerToClientEvents, ClientToServerEvents>>();
+  const [activeSpeakers, setActiveSpeakers] = useState<string[]>([]);
 
   const device = useRef<Device>(null);
   const producerTransport = useRef<Transport>(null);
   const audioProducer = useRef<Producer>(null);
   const videoProducer = useRef<Producer>(null);
+  const consumers = useRef<Record<string, ConsumerType>>({});
 
   useEffect(() => {
     const clientSocket: Socket<ServerToClientEvents, ClientToServerEvents> =
@@ -124,8 +126,8 @@ export const useMediasoup = (
     });
 
     clientSocket.on("newProducersToConsume", (consumeData) => {
+      //updatActiveSpeakers(consumeData.activeSpeakerList);
       requestTransportToConsume(consumeData);
-      updatActiveSpeakers(consumeData.activeSpeakerList);
     });
 
     clientSocket.on("updateActiveSpeakers", (newListOfActives) => {
@@ -139,11 +141,26 @@ export const useMediasoup = (
     };
   }, []);
 
-  const updatActiveSpeakers = (newListOfActives: string[]) => {
-    dispatch({
-      type: ActionType.SET_ACTIVE_SPEAKERS,
-      payload: newListOfActives,
+  useEffect(() => {
+    activeSpeakers.forEach((aid) => {
+      if (aid !== audioProducer.current?.id) {
+        const consumer = consumers.current[aid];
+
+        if (consumer) {
+          dispatch({
+            type: ActionType.SET_MEDIA_CONSUMER,
+            payload: {
+              userName: consumer?.userName,
+              mediaStream: consumer?.combinedStream,
+            },
+          });
+        }
+      }
     });
+  }, [activeSpeakers]);
+
+  const updatActiveSpeakers = (newListOfActives: string[]) => {
+    setActiveSpeakers(newListOfActives);
   };
 
   const socketSendMessage = async (
@@ -384,16 +401,21 @@ export const useMediasoup = (
           videoConsumer.track,
         ]);
 
-        const consumer: Record<string, ConsumerType> = {};
-        consumer[audioPid] = {
+        dispatch({
+          type: ActionType.SET_MEDIA_CONSUMER,
+          payload: {
+            userName: consumeData.associatedUserNames[i],
+            mediaStream: combinedStream,
+          },
+        });
+
+        consumers.current[audioPid] = {
           combinedStream,
           userName: consumeData.associatedUserNames[i],
           consumerTransport,
           audioConsumer: audioConsumer,
           videoConsumer: videoConsumer,
         };
-
-        dispatch({ type: ActionType.SET_CONSUMER, payload: consumer });
       } catch (error) {
         const errorMessage =
           error instanceof Error
@@ -436,10 +458,11 @@ export const useMediasoup = (
           audioPidsToCreate: joinRoomResp.result?.audioPidsToCreate!,
           videoPidsToCreate: joinRoomResp.result?.videoPidsToCreate!,
           associatedUserNames: joinRoomResp.result?.associatedUserNames!,
+          activeSpeakerList: joinRoomResp.result?.audioPidsToCreate!,
         };
 
+        //updatActiveSpeakers(joinRoomResp.result?.audioPidsToCreate!);
         requestTransportToConsume(consumeData);
-        updatActiveSpeakers(joinRoomResp.result?.audioPidsToCreate!);
         resolve();
       }
     });
@@ -476,7 +499,6 @@ export const useMediasoup = (
   };
 
   return {
-    audioProducerId: audioProducer.current?.id,
     socketSendMessage,
     joinMediaSoupRoom,
     startPublish,

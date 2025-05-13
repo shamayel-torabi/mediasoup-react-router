@@ -5,7 +5,7 @@ import {
     useReducer,
 } from 'react'
 
-import { type ConsumerType, type Message, type RoomType } from '~/types';
+import { type MediaConsumer, type Message, type RoomType } from '~/types';
 import { useUserContext } from './UserProvider';
 import { toast } from 'sonner';
 import { useMediasoup } from '~/hooks/useMediasoup';
@@ -14,7 +14,7 @@ import { useMediasoup } from '~/hooks/useMediasoup';
 type MediaContextType = {
     messages: Message[];
     rooms: RoomType[];
-    mediaConsumers: MediaType[],
+    mediaConsumers: MediaConsumer[],
     userName: string;
     creatRoom: (roomName: string) => Promise<string>;
     sendMessage: (text: string) => Promise<void>;
@@ -31,8 +31,6 @@ export enum ActionType {
     SET_ROOMS = 'SET_ROOMS',
     SET_ROOM_ID = 'SET_ROOM_ID',
     ADD_ROOM = 'ADD_ROOM',
-    SET_ACTIVE_SPEAKERS = 'SET_ACTIVE_SPEAKERS',
-    SET_CONSUMER = 'SET_CONSUMER',
     SET_MEDIA_CONSUMER = 'SET_MEDIA_CONSUMER'
 }
 export type Action = {
@@ -40,18 +38,11 @@ export type Action = {
     payload: any;
 }
 
-type MediaType = {
-    userName?: string;
-    mediaStream?: MediaStream;
-}
-
 type MediaState = {
     roomId: string;
     messages: Message[];
     rooms: RoomType[];
-    activeSpeakers: string[];
-    consumers: Record<string, ConsumerType>,
-    mediaConsumers: MediaType[]
+    mediaConsumers: MediaConsumer[]
 }
 
 function mediaReducer(state: MediaState, action: Action) {
@@ -67,10 +58,6 @@ function mediaReducer(state: MediaState, action: Action) {
             return { ...state, roomId: payload };
         case ActionType.ADD_ROOM:
             return { ...state, rooms: [...state.rooms, payload] };
-        case ActionType.SET_ACTIVE_SPEAKERS:
-            return { ...state, activeSpeakers: payload };
-        case ActionType.SET_CONSUMER:
-            return { ...state, consumers: { ...state.consumers, ...payload } };
         case ActionType.SET_MEDIA_CONSUMER:
             return { ...state, mediaConsumers: [...state.mediaConsumers, payload] };
         default:
@@ -82,8 +69,6 @@ const initState: MediaState = {
     roomId: '',
     messages: [],
     rooms: [],
-    activeSpeakers: [],
-    consumers: {},
     mediaConsumers: []
 }
 
@@ -93,7 +78,6 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
     const [state, dispatch] = useReducer(mediaReducer, initState);
 
     const {
-        audioProducerId,
         socketSendMessage,
         joinMediaSoupRoom,
         startPublish,
@@ -117,27 +101,27 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
         }
     }, [state.roomId]);
 
-    useEffect(() => {
-        console.log('state.activeSpeakers:', state.activeSpeakers);
-        console.log('state.consumers', state.consumers);
+    // useEffect(() => {
+    //     console.log('state.activeSpeakers:', state.activeSpeakers);
+    //     console.log('state.consumers', state.consumers);
 
-        state.activeSpeakers.forEach(aid => {
-            if (aid !== audioProducerId) {
-                const consumer = state.consumers[aid];
+    //     state.activeSpeakers.forEach(aid => {
+    //         if (aid !== audioProducerId) {
+    //             const consumer = state.consumers[aid];
 
-                if (consumer) {
-                    dispatch({
-                        type: ActionType.SET_MEDIA_CONSUMER,
-                        payload: {
-                            userName: consumer?.userName,
-                            mediaStream: consumer?.combinedStream
-                        }
-                    });
-                }
-            }
-        });
+    //             if (consumer) {
+    //                 dispatch({
+    //                     type: ActionType.SET_MEDIA_CONSUMER,
+    //                     payload: {
+    //                         userName: consumer?.userName,
+    //                         mediaStream: consumer?.combinedStream
+    //                     }
+    //                 });
+    //             }
+    //         }
+    //     });
 
-    }, [state.activeSpeakers, state.consumers])
+    // }, [state.activeSpeakers])
 
     const sendMessage = async (text: string) => {
         if (state.roomId) {

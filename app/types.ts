@@ -26,13 +26,10 @@ export type User = {
   createdAt: Date;
 };
 
-// export type MediaConsumer = {
-//   combinedStream: MediaStream;
-//   userName: string;
-//   consumerTransport: Transport;
-//   audioConsumer: Consumer;
-//   videoConsumer: Consumer;
-// };
+export type MediaConsumer = {
+    userName?: string;
+    mediaStream?: MediaStream;
+};
 
 export type ConsumeData = {
   audioPidsToCreate: string[];
