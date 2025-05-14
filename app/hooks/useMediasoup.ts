@@ -9,7 +9,6 @@ import {
   type Transport,
   type TransportOptions,
 } from "mediasoup-client/types";
-import { console } from "node:inspector";
 import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import { ActionType, type Action } from "~/components/MediaProvider";
@@ -23,11 +22,7 @@ import type {
 } from "~/types";
 
 interface ClientToServerEvents {
-  sendMessage: ({
-    text,
-    userName,
-    roomId,
-  }: {
+  sendMessage: ({ text, userName, roomId, }: {
     text: string;
     userName: string;
     roomId: string;
@@ -96,13 +91,10 @@ interface ServerToClientEvents {
   updateActiveSpeakers: (newListOfActives: string[]) => void;
 }
 
-export const useMediasoup = (
-  dispatch: React.ActionDispatch<[action: Action]>
-) => {
+export const useMediasoup = (dispatch: React.ActionDispatch<[action: Action]>) => {
   const [socket, setSocket] =
     useState<Socket<ServerToClientEvents, ClientToServerEvents>>();
   const [activeSpeakers, setActiveSpeakers] = useState<string[]>([]);
-  //const [consumers, setConsumers] = useState<Record<string, ConsumerType>>({});
 
   const device = useRef<Device>(null);
   const producerTransport = useRef<Transport>(null);
@@ -152,8 +144,8 @@ export const useMediasoup = (
           dispatch({
             type: ActionType.SET_MEDIA_CONSUMER,
             payload: {
-              userName: consumer?.userName,
-              mediaStream: consumer?.combinedStream,
+              userName: consumer.userName,
+              mediaStream: consumer.combinedStream,
             },
           });
         }
@@ -427,7 +419,7 @@ export const useMediasoup = (
 
     //console.log('cnsmrs:', cnsmrs)
 
-    consumers.current = {...cnsmrs}
+    consumers.current = { ...cnsmrs }
   };
 
   const joinMediaSoupRoom = (userName: string, roomId: string) => {

@@ -79,7 +79,8 @@ export class Room extends EventEmitter {
     //console.log(this.activeSpeakerList);
     // PLACEHOLDER - the activeSpeakerlist has changed!
     // updateActiveSpeakers = mute/unmute/get new transports
-    this.updateActiveSpeakers();
+    const newTransportsByPeer = this.updateActiveSpeakers();
+    this.updateProducersToConsume(newTransportsByPeer);
   }
   updateActiveSpeakers() {
     //this function is called on newDominantSpeaker, or a new peer produces
@@ -144,7 +145,7 @@ export class Room extends EventEmitter {
     // need to be made.
     // Broadcast to this this
     this.io.to(this.id).emit("updateActiveSpeakers", activeSpeakers);
-    this.updateProducersToConsume(newTransportsByPeer);
+    return newTransportsByPeer;
   }
   updateProducersToConsume(newTransportsByPeer) {
     for (const [socketId, audioPidsToCreate] of Object.entries(
