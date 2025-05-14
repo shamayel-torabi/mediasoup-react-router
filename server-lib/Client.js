@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { EventEmitter } from "node:events";
 import { config } from "./config.js";
+import { rejects } from "node:assert";
 
 export class Client extends EventEmitter {
   constructor(userName, room, socket) {
@@ -31,7 +32,7 @@ export class Client extends EventEmitter {
     });
   }
   addTransport(type, audioPid, videoPid) {
-    return new Promise(async (resolve, _reject) => {
+    return new Promise(async (resolve, reject) => {
       const {
         listenInfos,
         initialAvailableOutgoingBitrate,
@@ -44,6 +45,10 @@ export class Client extends EventEmitter {
         listenInfos: listenInfos,
         initialAvailableOutgoingBitrate,
       });
+
+      if(!transport)
+        rejects(new Error('createWebRtcTransport error'));
+      
       if (maxIncomingBitrate) {
         // maxIncomingBitrate limit the incoming bandwidth from this transport
         try {
@@ -78,13 +83,13 @@ export class Client extends EventEmitter {
   }
   addProducer(kind, newProducer) {
     this.producer[kind] = newProducer;
-    
+
     if (kind === "audio") {
       // add this to our activeSpeakerObserver
       this.room.activeSpeakerObserver?.addProducer({
         producerId: newProducer.id,
       });
-      this.room.activeSpeakerList.push(newProducer?.id);
+      this.room.activeSpeakerList.push(newProducer.id);
     }
   }
   addConsumer(kind, newConsumer, downstreamTransport) {

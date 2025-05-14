@@ -121,7 +121,7 @@ export const useMediasoup = (dispatch: React.ActionDispatch<[action: Action]>) =
 
     clientSocket.on("newProducersToConsume", (consumeData) => {
       console.log('newProducersToConsume consumeData:', consumeData)
-      requestTransportToConsume(consumeData);
+      requestTransportToConsume(consumeData, clientSocket);
     });
 
     clientSocket.on("updateActiveSpeakers", (newListOfActives) => {
@@ -312,13 +312,14 @@ export const useMediasoup = (dispatch: React.ActionDispatch<[action: Action]>) =
   const createConsumer = (
     consumerTransport: Transport,
     producerId: string,
-    kind: MediaKind
+    kind: MediaKind,
+    socketIO: Socket<ServerToClientEvents, ClientToServerEvents>
   ) => {
     return new Promise<Consumer>(async (resolve, reject) => {
       // consume from the basics, emit the consumeMedia event, we take
       // the params we get back, and run .consume(). That gives us our track
       if (device.current) {
-        const consumerParams = await socket?.emitWithAck("consumeMedia", {
+        const consumerParams = await socketIO.emitWithAck("consumeMedia", {
           rtpCapabilities: device.current.rtpCapabilities,
           producerId,
           kind,
@@ -341,7 +342,7 @@ export const useMediasoup = (dispatch: React.ActionDispatch<[action: Action]>) =
             //const { track } = consumer;
             // add track events
             //unpause
-            const result = await socket?.emitWithAck("unpauseConsumer", {
+            const result = await socketIO.emitWithAck("unpauseConsumer", {
               producerId,
               kind,
             });
@@ -359,30 +360,26 @@ export const useMediasoup = (dispatch: React.ActionDispatch<[action: Action]>) =
     });
   };
 
-  const requestTransportToConsume = (consumeData: ConsumeData) => {
+  const requestTransportToConsume = (consumeData: ConsumeData, socketIO: Socket<ServerToClientEvents, ClientToServerEvents>) => {
     let cnsmrs: Record<string, ConsumerType> = {};
 
     consumeData.audioPidsToCreate.forEach(async (audioPid, i) => {
       try {
-        const videoPid = consumeData.videoPidsToCreate[i];
 
-        const consumerTransportParams = await socket?.emitWithAck(
-          "requestTransport",
-          { type: "consumer", audioPid }
-        );
-        //console.log('requestTransportToConsume consumerTransportParams:', consumerTransportParams);
+
+        const videoPid = consumeData.videoPidsToCreate[i];
+        const consumerTransportParams = await socketIO.emitWithAck('requestTransport', { type: "consumer", audioPid })
+
+        console.log('requestTransportToConsume consumerTransportParams:', consumerTransportParams);
 
         if (!consumerTransportParams)
           throw new Error("consumerTransportParams undefined");
 
-        const consumerTransport = createConsumerTransport(
-          consumerTransportParams,
-          audioPid
-        );
+        const consumerTransport = createConsumerTransport(consumerTransportParams, audioPid);
 
         const [audioConsumer, videoConsumer] = await Promise.all([
-          createConsumer(consumerTransport, audioPid, "audio"),
-          createConsumer(consumerTransport, videoPid, "video"),
+          createConsumer(consumerTransport, audioPid, "audio", socketIO),
+          createConsumer(consumerTransport, videoPid, "video", socketIO),
         ]);
         //console.log('audioConsumer: ', audioConsumer);
         //console.log('videoConsumer: ', videoConsumer);
@@ -457,7 +454,7 @@ export const useMediasoup = (dispatch: React.ActionDispatch<[action: Action]>) =
           activeSpeakerList: joinRoomResp.result?.audioPidsToCreate!,
         };
 
-        requestTransportToConsume(consumeData);
+        requestTransportToConsume(consumeData, socket!);
         resolve();
       }
     });
