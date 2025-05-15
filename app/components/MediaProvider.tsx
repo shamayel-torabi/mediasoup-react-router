@@ -21,6 +21,7 @@ type MediaContextType = {
     joinRoom: (roomId: string) => Promise<void>;
     startPublish: (localStream: MediaStream) => Promise<void>;
     audioChange: () => boolean;
+    hangUp: () => Promise<boolean>;
 }
 
 const MediaContext = createContext<MediaContextType>({} as MediaContextType)
@@ -30,6 +31,7 @@ export enum ActionType {
     ADD_MESSAGE = 'ADD_MESSAGE',
     SET_ROOMS = 'SET_ROOMS',
     SET_ROOM_ID = 'SET_ROOM_ID',
+    SET_CLIENT_ID = 'SET_CLIENT_ID',
     ADD_ROOM = 'ADD_ROOM',
     SET_MEDIA_CONSUMER = 'SET_MEDIA_CONSUMER'
 }
@@ -39,7 +41,8 @@ export type Action = {
 }
 
 type MediaState = {
-    roomId: string;
+    roomId?: string;
+    clientId?: string;
     messages: Message[];
     rooms: RoomType[];
     mediaConsumers: MediaConsumer[]
@@ -56,6 +59,8 @@ function mediaReducer(state: MediaState, action: Action) {
             return { ...state, rooms: payload };
         case ActionType.SET_ROOM_ID:
             return { ...state, roomId: payload };
+        case ActionType.SET_CLIENT_ID:
+            return { ...state, clientId: payload };
         case ActionType.ADD_ROOM:
             return { ...state, rooms: [...state.rooms, payload] };
         case ActionType.SET_MEDIA_CONSUMER:
@@ -66,7 +71,6 @@ function mediaReducer(state: MediaState, action: Action) {
 }
 
 const initState: MediaState = {
-    roomId: '',
     messages: [],
     rooms: [],
     mediaConsumers: []
@@ -82,7 +86,8 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
         joinMediaSoupRoom,
         startPublish,
         createMediaSoupRoom,
-        audioChange
+        audioChange,
+        closeClient
     } = useMediasoup(dispatch);
 
 
@@ -116,6 +121,10 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
         return roomId || '';
     }
 
+    const hangUp = async () => {
+        return await closeClient(state.roomId, state.clientId);
+    }
+
     const contextValue: MediaContextType = {
         rooms: state.rooms,
         messages: state.messages,
@@ -126,6 +135,7 @@ export default function MediaProvider({ children }: Readonly<{ children: React.R
         joinRoom,
         startPublish,
         audioChange,
+        hangUp
     }
     return (
         <MediaContext value={contextValue}>

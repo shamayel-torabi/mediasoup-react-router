@@ -170,9 +170,7 @@ const runMediaSoupServer = async (app) => {
         console.log("requestTransport error");
       }
     });
-    socket.on(
-      "connectTransport",
-      async ({ dtlsParameters, type, audioPid }, ackCb) => {
+    socket.on("connectTransport", async ({ dtlsParameters, type, audioPid }, ackCb) => {
         if (type === "producer") {
           try {
             await client.upstreamTransport?.connect({ dtlsParameters });
@@ -234,9 +232,7 @@ const runMediaSoupServer = async (app) => {
         console.log("Error:", error);
       }
     });
-    socket.on(
-      "consumeMedia",
-      async ({ rtpCapabilities, producerId, kind }, ackCb) => {
+    socket.on("consumeMedia", async ({ rtpCapabilities, producerId, kind }, ackCb) => {
         // will run twice for every peer to consume... once for video, once for audio
         console.log("Kind: ", kind, "   producerId:", producerId);
         // we will set up our clientConsumer, and send back the params
