@@ -15,6 +15,7 @@ RUN npm ci --omit=dev
 
 FROM development-dependencies-env AS build-env
 COPY . /app
+RUN npx prisma generate 
 RUN npm run build
 
 FROM node:22
