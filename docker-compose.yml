@@ -1,0 +1,13 @@
+version: '3.5'
+
+services:
+  node_soup:
+    container_name: mediasoup-server
+    image: mediasoup-server-react:1.0.0
+    environment:
+      - DATABASE_URL=file:/app/prisma/dev.db
+    ports:
+      - "3000:3000"
+      - "40000-41000:40000-41000" 
+    volumes:
+      - ./app-data:/app/prisma

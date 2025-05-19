@@ -12,27 +12,17 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import { ActionType, type Action } from "~/components/MediaProvider";
-import type {
-  Message,
-  ConsumeData,
-  ClientTransportOptions,
-  ClientParamsType,
-  RoomType,
-  ConsumerType,
-} from "~/types";
+import type { Message, ConsumeData, ClientTransportOptions, ClientParamsType, RoomType, ConsumerType } from "~/types";
 
 interface ClientToServerEvents {
-  sendMessage: ({ text, userName, roomId, }: {
-    text: string;
-    userName: string;
-    roomId: string;
-  }) => void;
-  createRoom: (
-    roomName: string,
-    ackCb: (result: { roomId?: string; error?: string }) => void
-  ) => void;
-  joinRoom: (data: { userName: string; roomId: string },
-    ackCb: ({ result, error, }: {
+  sendMessage: ({ text, userName, roomId }: { text: string; userName: string; roomId: string }) => void;
+  createRoom: (roomName: string, ackCb: (result: { roomId?: string; error?: string }) => void) => void;
+  joinRoom: (
+    data: { userName: string; roomId: string },
+    ackCb: ({
+      result,
+      error,
+    }: {
       result?: {
         routerRtpCapabilities: RtpCapabilities;
         newRoom: boolean;
@@ -45,26 +35,11 @@ interface ClientToServerEvents {
       error?: string;
     }) => void
   ) => void;
-  closeClient: (
-    data: { roomId: string; clientId: string },
-    ackCb: (result: { status: string }) => void
-  ) => void;
-  closeRoom: (
-    data: { roomId: string },
-    ackCb: (result: { status: string }) => void
-  ) => void;
-  requestTransport: (
-    data: { type: string; audioPid?: string },
-    ackCb: (clientTransportParams: ClientTransportOptions) => void
-  ) => void;
-  connectTransport: (
-    data: { dtlsParameters: DtlsParameters; type: string; audioPid?: string },
-    ackCb: (status: string) => void
-  ) => void;
-  startProducing: (
-    data: { kind: MediaKind; rtpParameters: RtpParameters },
-    ackCb: (result: { producerId?: string; error?: unknown }) => void
-  ) => void;
+  closeClient: (data: { roomId: string; clientId: string }, ackCb: (result: { status: string }) => void) => void;
+  closeRoom: (data: { roomId: string }, ackCb: (result: { status: string }) => void) => void;
+  requestTransport: (data: { type: string; audioPid?: string }, ackCb: (clientTransportParams: ClientTransportOptions) => void) => void;
+  connectTransport: (data: { dtlsParameters: DtlsParameters; type: string; audioPid?: string }, ackCb: (status: string) => void) => void;
+  startProducing: (data: { kind: MediaKind; rtpParameters: RtpParameters }, ackCb: (result: { producerId?: string; error?: unknown }) => void) => void;
   audioChange: (typeOfChange: string) => void;
   consumeMedia: (
     data: {
@@ -72,15 +47,9 @@ interface ClientToServerEvents {
       producerId: string;
       kind: MediaKind;
     },
-    ackCb: (result: {
-      consumerOptions?: ClientParamsType;
-      status?: string;
-    }) => void
+    ackCb: (result: { consumerOptions?: ClientParamsType; status?: string }) => void
   ) => void;
-  unpauseConsumer: (
-    data: { producerId: string; kind: MediaKind },
-    ackCb: ({ status }: { status: string }) => void
-  ) => void;
+  unpauseConsumer: (data: { producerId: string; kind: MediaKind }, ackCb: ({ status }: { status: string }) => void) => void;
 }
 
 interface ServerToClientEvents {
@@ -163,45 +132,42 @@ export const useMediasoup = (dispatch: React.ActionDispatch<[action: Action]>) =
   };
 
   const createProducer = (localStream: MediaStream, producerTransport: Transport) => {
-    return new Promise<{ audioProducer: Producer; videoProducer: Producer }>(
-      async (resolve, reject) => {
-        //get the audio and video tracks so we can produce
-        const videoTrack = localStream.getVideoTracks()[0];
-        const audioTrack = localStream.getAudioTracks()[0];
-        try {
-          // running the produce method, will tell the transport
-          // connect event to fire!!
-          //console.log("Calling produce on video");
-          const videoProducer = await producerTransport.produce({
-            track: videoTrack,
-          });
-          //console.log("Calling produce on audio");
-          const audioProducer = await producerTransport.produce({
-            track: audioTrack,
-          });
-          //console.log("finished producing!");
-          resolve({ audioProducer, videoProducer });
-        } catch (err) {
-          console.log(err, "error producing");
-          reject(err);
-        }
+    return new Promise<{ audioProducer: Producer; videoProducer: Producer }>(async (resolve, reject) => {
+      //get the audio and video tracks so we can produce
+      const videoTrack = localStream.getVideoTracks()[0];
+      const audioTrack = localStream.getAudioTracks()[0];
+      try {
+        // running the produce method, will tell the transport
+        // connect event to fire!!
+        //console.log("Calling produce on video");
+        const videoProducer = await producerTransport.produce({
+          track: videoTrack,
+        });
+        //console.log("Calling produce on audio");
+        const audioProducer = await producerTransport.produce({
+          track: audioTrack,
+        });
+        //console.log("finished producing!");
+        resolve({ audioProducer, videoProducer });
+      } catch (err) {
+        console.log(err, "error producing");
+        reject(err);
       }
-    );
+    });
   };
 
-  const createProducerTransport = () => new Promise<Transport>(async (resolve, reject) => {
-    // ask the server to make a transport and send params
-    const producerTransportParams = await socket?.emitWithAck("requestTransport", { type: "producer" });
-    //console.log('producerTransportParams:', producerTransportParams)
-    //use the device to create a front-end transport to send
-    // it takes our object from requestTransport
+  const createProducerTransport = () =>
+    new Promise<Transport>(async (resolve, reject) => {
+      // ask the server to make a transport and send params
+      const producerTransportParams = await socket?.emitWithAck("requestTransport", { type: "producer" });
+      //console.log('producerTransportParams:', producerTransportParams)
+      //use the device to create a front-end transport to send
+      // it takes our object from requestTransport
 
-    if (device.current) {
-      const producerTransport = device.current.createSendTransport(producerTransportParams!);
-      // console.log(producerTransport)
-      producerTransport.on(
-        "connect",
-        async ({ dtlsParameters }, callback, errback) => {
+      if (device.current) {
+        const producerTransport = device.current.createSendTransport(producerTransportParams!);
+        // console.log(producerTransport)
+        producerTransport.on("connect", async ({ dtlsParameters }, callback, errback) => {
           // transport connect event will NOT fire until transport.produce() runs
           // dtlsParams are created by the browser so we can finish
           // the other half of the connection
@@ -221,11 +187,8 @@ export const useMediasoup = (dispatch: React.ActionDispatch<[action: Action]>) =
             // connection failed. Stop
             errback(new Error("Error connectTransport"));
           }
-        }
-      );
-      producerTransport.on(
-        "produce",
-        async (parameters, callback, errback) => {
+        });
+        producerTransport.on("produce", async (parameters, callback, errback) => {
           // emit startProducing
           //console.log("Produce event is now running");
           const { kind, rtpParameters } = parameters;
@@ -242,14 +205,13 @@ export const useMediasoup = (dispatch: React.ActionDispatch<[action: Action]>) =
             // only other option is the producer id
             callback({ id: produceResp?.producerId! });
           }
-        }
-      );
+        });
 
-      resolve(producerTransport!);
-    } else {
-      reject(new Error("device undefined"));
-    }
-  });
+        resolve(producerTransport!);
+      } else {
+        reject(new Error("device undefined"));
+      }
+    });
 
   const createConsumerTransport = (transportParams: TransportOptions, audioPid: string, socketIO: SocketIO) => {
     if (device.current) {
@@ -264,28 +226,25 @@ export const useMediasoup = (dispatch: React.ActionDispatch<[action: Action]>) =
         //console.log(state);
       });
       // transport connect listener... fires on .consume()
-      consumerTransport.on(
-        "connect",
-        async ({ dtlsParameters }, callback, errback) => {
-          //console.log("Transport connect event has fired!");
-          // connect comes with local dtlsParameters. We need
-          // to send these up to the server, so we can finish
-          // the connection
+      consumerTransport.on("connect", async ({ dtlsParameters }, callback, errback) => {
+        //console.log("Transport connect event has fired!");
+        // connect comes with local dtlsParameters. We need
+        // to send these up to the server, so we can finish
+        // the connection
 
-          const connectResp = await socketIO.emitWithAck("connectTransport", {
-            dtlsParameters,
-            type: "consumer",
-            audioPid,
-          });
+        const connectResp = await socketIO.emitWithAck("connectTransport", {
+          dtlsParameters,
+          type: "consumer",
+          audioPid,
+        });
 
-          //console.log(connectResp, "connectResp is back!");
-          if (connectResp === "success") {
-            callback(); //this will finish our await consume
-          } else {
-            errback(new Error("consumerTransport connect Error"));
-          }
+        //console.log(connectResp, "connectResp is back!");
+        if (connectResp === "success") {
+          callback(); //this will finish our await consume
+        } else {
+          errback(new Error("consumerTransport connect Error"));
         }
-      );
+      });
       return consumerTransport;
     } else {
       throw new Error("device undefined");
@@ -318,9 +277,8 @@ export const useMediasoup = (dispatch: React.ActionDispatch<[action: Action]>) =
             //const { track } = consumer;
             // add track events
             //unpause
-            const result = await socketIO.emitWithAck("unpauseConsumer", { producerId, kind, });
-            if (result?.status === "error")
-              console.log("unpauseConsumer result:", result);
+            const result = await socketIO.emitWithAck("unpauseConsumer", { producerId, kind });
+            if (result?.status === "error") console.log("unpauseConsumer result:", result);
 
             resolve(consumer);
           }
@@ -339,12 +297,11 @@ export const useMediasoup = (dispatch: React.ActionDispatch<[action: Action]>) =
     try {
       consumeData.audioPidsToCreate.forEach(async (audioPid, i) => {
         const videoPid = consumeData.videoPidsToCreate[i];
-        const consumerTransportParams = await socketIO.emitWithAck('requestTransport', { type: "consumer", audioPid })
+        const consumerTransportParams = await socketIO.emitWithAck("requestTransport", { type: "consumer", audioPid });
 
         //console.log('requestTransportToConsume consumerTransportParams:', consumerTransportParams);
 
-        if (!consumerTransportParams)
-          throw new Error("consumerTransportParams undefined");
+        if (!consumerTransportParams) throw new Error("consumerTransportParams undefined");
 
         const consumerTransport = createConsumerTransport(consumerTransportParams, audioPid, socketIO);
 
@@ -356,10 +313,7 @@ export const useMediasoup = (dispatch: React.ActionDispatch<[action: Action]>) =
         //console.log('videoConsumer: ', videoConsumer);
         // create a new MediaStream on the client with both tracks
         // This is why we have gone through all this pain!!!
-        const combinedStream = new MediaStream([
-          audioConsumer.track,
-          videoConsumer.track,
-        ]);
+        const combinedStream = new MediaStream([audioConsumer.track, videoConsumer.track]);
 
         dispatch({
           type: ActionType.SET_MEDIA_CONSUMER,
@@ -378,19 +332,16 @@ export const useMediasoup = (dispatch: React.ActionDispatch<[action: Action]>) =
         };
       });
     } catch (error) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "requestTransportToConsume error";
+      const errorMessage = error instanceof Error ? error.message : "requestTransportToConsume error";
       console.log(errorMessage);
     }
-    consumers.current = { ...cnsmrs }
+    consumers.current = { ...cnsmrs };
   };
 
   const joinMediaSoupRoom = (userName: string, roomId: string) => {
     return new Promise<void>(async (resolve, reject) => {
       //console.log("joinMediaSoupRoom:", { userName, roomId });
-      const joinRoomResp = await socket?.emitWithAck("joinRoom", { userName, roomId, });
+      const joinRoomResp = await socket?.emitWithAck("joinRoom", { userName, roomId });
 
       if (!joinRoomResp) {
         reject(new Error("result is null"));
@@ -475,10 +426,10 @@ export const useMediasoup = (dispatch: React.ActionDispatch<[action: Action]>) =
 
       return true;
     } catch (error) {
-      console.log('closeClient error');
+      console.log("closeClient error");
       return false;
     }
-  }
+  };
 
   return {
     socketSendMessage,
@@ -486,6 +437,6 @@ export const useMediasoup = (dispatch: React.ActionDispatch<[action: Action]>) =
     startPublish,
     createMediaSoupRoom,
     audioChange,
-    closeClient
+    closeClient,
   };
 };

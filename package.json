@@ -3,14 +3,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "prebuild": "prisma generate",
+    "prebuild": "npx prisma migrate dev --name init",
     "build": "react-router build",
     "dev": "cross-env NODE_ENV=development node server.js",
     "start": "node server.js",
     "typecheck": "react-router typegen && tsc -b"
-  },
-  "prisma": {
-    "seed": "tsx ./prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.6.0",
