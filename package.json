@@ -2,8 +2,7 @@
   "name": "mediasoup-react-router",
   "private": true,
   "type": "module",
-  "scripts": {
-    "prebuild": "npx prisma migrate dev --name init",
+  "scripts": {    
     "build": "react-router build",
     "dev": "cross-env NODE_ENV=development node server.js",
     "start": "node server.js",
