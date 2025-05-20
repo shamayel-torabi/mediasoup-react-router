@@ -24,10 +24,8 @@ RUN npm run build
 FROM mediasoup-server-prod
 COPY ./package.json package-lock.json server.js /app/
 COPY ./prisma /app/prisma
-#COPY --from=mediasoup-server-prod /app/node_modules /app/node_modules
 COPY --from=build-env /app/build /app/build
 COPY --from=build-env /app/app/generated/prisma /app/app/generated/prisma
-#COPY --from=build-env /app/data /app/data
 COPY ./server-lib /app/server-lib
 WORKDIR /app
 EXPOSE 3000
