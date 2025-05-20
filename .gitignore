@@ -5,5 +5,4 @@
 # React Router
 /.react-router/
 /build/
-/app/generated/client
-.env
+/app/generated
