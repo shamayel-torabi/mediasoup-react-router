@@ -1,30 +1,36 @@
-FROM node:22 AS base-development
-RUN set -x \
-	&& apt-get update \
-	&& apt-get install -y net-tools build-essential python3 python3-pip valgrind
+# FROM node:22 AS base
+# RUN set -x \
+# 	&& apt-get update \
+# 	&& apt-get install -y net-tools build-essential python3 python3-pip valgrind
 
-FROM base-development AS development-dependencies-env
-COPY ./package.json package-lock.json /app/
-WORKDIR /app
-RUN npm ci
+# FROM base AS development-env
+# COPY ./package.json package-lock.json /app/
+# WORKDIR /app
+# RUN npm ci
 
-FROM base-development AS production-dependencies-env
-COPY ./package.json package-lock.json /app/
-WORKDIR /app
-RUN npm ci --omit=dev
+# FROM base AS production-env
+# COPY ./package.json package-lock.json /app/
+# WORKDIR /app
+# RUN npm ci --omit=dev
 
-FROM development-dependencies-env AS build-env
+FROM mediasoup-server-dev AS build-env
 COPY . /app
-RUN npx prisma generate 
+WORKDIR /app
+RUN npx prisma generate
+#RUN npx prisma db push
+#RUN npx prisma migrate deploy
 RUN npm run build
 
-FROM node:22
+FROM mediasoup-server-prod
 COPY ./package.json package-lock.json server.js /app/
-COPY --from=production-dependencies-env /app/node_modules /app/node_modules
-COPY --from=build-env /app/build /app/build
-COPY ./server-lib /app/server-lib
 COPY ./prisma /app/prisma
+#COPY --from=mediasoup-server-prod /app/node_modules /app/node_modules
+COPY --from=build-env /app/build /app/build
+COPY --from=build-env /app/app/generated/prisma /app/app/generated/prisma
+#COPY --from=build-env /app/data /app/data
+COPY ./server-lib /app/server-lib
 WORKDIR /app
 EXPOSE 3000
-VOLUME /app/prisma
+ENV PORT=3000
+VOLUME /app/data
 CMD ["npm", "run", "start"]
