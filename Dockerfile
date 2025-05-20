@@ -25,7 +25,7 @@ FROM mediasoup-server-prod
 COPY ./package.json package-lock.json server.js /app/
 COPY ./prisma /app/prisma
 COPY --from=build-env /app/build /app/build
-COPY --from=build-env /app/app/generated/prisma /app/app/generated/prisma
+COPY --from=build-env /app/app/generated/prisma/libquery_engine-debian-openssl-3.0.x.so.node /app/build/server/assets/libquery_engine-debian-openssl-3.0.x.so.node
 COPY ./server-lib /app/server-lib
 WORKDIR /app
 EXPOSE 3000

@@ -1,7 +1,5 @@
-version: '3.5'
-
 services:
-  node_soup:
+  mediasoup-server:
     container_name: mediasoup-server
     image: mediasoup-server-react:1.0.0
     environment:
