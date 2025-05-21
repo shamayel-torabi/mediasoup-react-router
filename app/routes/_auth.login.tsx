@@ -41,7 +41,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export async function action({ request }: Route.ActionArgs): Promise<ActionProps> {
-  let response: Response;
+  let response
   try {
     const formData = await request.formData();
     const email = formData.get("email") as string;
@@ -75,7 +75,9 @@ export async function action({ request }: Route.ActionArgs): Promise<ActionProps
     if (!response) {
       throw new Error("یک خطا هنگام ایجاد جلسه رخ داده است!");
     }
+
   } catch (error) {
+    console.log(error)
     const errorMessage = error instanceof Error ? error.message : 'یک خطای ناشناخته رخ داده است!'
     return {
       errors: {
@@ -87,7 +89,7 @@ export async function action({ request }: Route.ActionArgs): Promise<ActionProps
     };
   }
 
-  throw response;
+  throw response
 }
 
 export default function Login({ actionData }: Route.ComponentProps) {

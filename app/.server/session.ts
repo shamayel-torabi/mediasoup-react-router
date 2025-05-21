@@ -1,21 +1,29 @@
 import { createCookieSessionStorage, redirect } from "react-router";
-import type { User } from "~/types";
 
-export const sessionStorage = createCookieSessionStorage({
+type SessionData = {
+  userId: string;
+};
+
+type SessionFlashData = {
+  error: string;
+};
+
+const { commitSession, destroySession, getSession } = createCookieSessionStorage<SessionData, SessionFlashData>({
   cookie: {
     name: "__session",
-    secrets: ["s3cret"],
-    sameSite: "lax",
-    path: "/",
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    sameSite: "lax",
+    secrets: ["s3cret"],
+    maxAge: 60 * 60 * 24,
+    secure: process.env.NODE_ENV !== "development",
   },
 });
 
-export const { commitSession, destroySession } = sessionStorage;
+const USER_SESSION_KEY = "userId";
 
 const getUserSession = async (request: Request) => {
-  return await sessionStorage.getSession(request.headers.get("Cookie"));
+  return await getSession(request.headers.get("Cookie"));
 };
 
 export async function logout(request: Request) {
@@ -23,16 +31,14 @@ export async function logout(request: Request) {
   const session = await getUserSession(request);
   return redirect("/", {
     headers: {
-      "Set-Cookie": await sessionStorage.destroySession(session),
+      "Set-Cookie": await destroySession(session),
     },
   });
 }
 
-const USER_SESSION_KEY = "userId";
-
-export async function getUserId(request: Request): Promise<User["id"] | undefined> {
+export async function getUserId(request: Request) {
   const session = await getUserSession(request);
-  const userId = session.get(USER_SESSION_KEY) as string;
+  const userId = session.get(USER_SESSION_KEY);
   return userId;
 }
 
@@ -51,13 +57,11 @@ export async function createUserSession({
   session.set(USER_SESSION_KEY, userId);
   return redirect(redirectUrl || "/", {
     headers: {
-      "Set-Cookie": await sessionStorage.commitSession(session, {
+      "Set-Cookie": await commitSession(session, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
-        maxAge: remember
-          ? 60 * 60 * 24 * 7 // 7 days
-          : undefined,
+        maxAge: remember ? 60 * 60 * 24 : undefined,
+        secure: process.env.NODE_ENV !== "development",
       }),
     },
   });

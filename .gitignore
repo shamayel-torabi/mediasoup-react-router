@@ -6,4 +6,9 @@
 /.react-router/
 /build/
 /app/generated/prisma
+/app-data
+/prisma/seed.ts
+
+# Env
 .env
+.env.*
