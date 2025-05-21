@@ -17,18 +17,17 @@ FROM mediasoup-server-dev AS build-env
 COPY . /app
 WORKDIR /app
 RUN npx prisma generate
-#RUN npx prisma db push
-#RUN npx prisma migrate deploy
 RUN npm run build
 
-FROM node:22-slim
+FROM node:22-slim AS production
 RUN apt update && apt install libssl-dev -y --no-install-recommends
+
+FROM production
 COPY ./package.json package-lock.json server.js /app/
 COPY ./prisma /app/prisma
 COPY --from=mediasoup-server-prod /app/node_modules /app/node_modules
 COPY --from=build-env /app/build /app/build
 COPY --from=build-env /app/app/generated/prisma/libquery_engine-debian-openssl-3.0.x.so.node /app/build/server/assets/libquery_engine-debian-openssl-3.0.x.so.node
-#COPY ./server-lib /app/server-lib
 WORKDIR /app
 EXPOSE 3000
 ENV PORT=3000
