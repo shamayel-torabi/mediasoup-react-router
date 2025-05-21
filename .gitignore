@@ -5,4 +5,4 @@
 # React Router
 /.react-router/
 /build/
-/app/generated
+/app/generated/prisma
