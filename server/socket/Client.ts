@@ -1,10 +1,20 @@
-// @ts-nocheck
 import { EventEmitter } from "node:events";
-import { config } from "./config.js";
-import { rejects } from "node:assert";
+import { Room } from "./Room";
+import { config } from "./config";
+import type { DownstreamTransportType } from "./types";
+import type { Consumer, MediaKind, Producer, WebRtcTransport } from "mediasoup/types";
+import type { SocketType } from "./socket-server";
 
 export class Client extends EventEmitter {
-  constructor(userName, room, socket) {
+  public id: string;
+  public userName: string;
+  public room: Room;
+  public upstreamTransport: WebRtcTransport | undefined;
+  public producer: Record<string, Producer> = {};
+  public downstreamTransports: DownstreamTransportType[] = [];
+  private socket: SocketType;
+
+  constructor(userName: string, room: Room, socket: SocketType) {
     super();
     this.producer = {};
     this.downstreamTransports = [];
@@ -14,30 +24,28 @@ export class Client extends EventEmitter {
     this.room = room; // this will be a Room object
     this.room.addClient(this);
   }
-  close() {
+
+  public close() {
     console.log(`Close Client with socketId: ${this.socket.id}`);
     this.room.removeClient(this);
     this.upstreamTransport?.close();
     this.downstreamTransports.forEach((tr) => tr.transport.close());
     this.emit("close");
   }
-  getDownstreamTransport(audioPid) {
-    return this.downstreamTransports.find(
-      (t) => t?.associatedAudioPid === audioPid
-    );
+
+  public getDownstreamTransport(audioPid: string) {
+    return this.downstreamTransports.find((t) => t?.associatedAudioPid === audioPid);
   }
-  getDownstreamConsumer(pid, kind) {
+
+  public getDownstreamConsumer(pid: string, kind: MediaKind) {
     return this.downstreamTransports.find((t) => {
       return t[kind]?.producerId === pid;
     });
   }
-  addTransport(type, audioPid, videoPid) {
-    return new Promise(async (resolve, reject) => {
-      const {
-        listenInfos,
-        initialAvailableOutgoingBitrate,
-        maxIncomingBitrate,
-      } = config.webRtcTransport;
+
+  public addTransport(type: "producer" | "consumer" , audioPid?: string, videoPid?: string) {
+    return new Promise(async (resolve, _reject) => {
+      const { listenInfos, initialAvailableOutgoingBitrate, maxIncomingBitrate } = config.webRtcTransport;
       const transport = await this.room.router?.createWebRtcTransport({
         enableUdp: true,
         enableTcp: true,
@@ -45,10 +53,6 @@ export class Client extends EventEmitter {
         listenInfos: listenInfos,
         initialAvailableOutgoingBitrate,
       });
-
-      if(!transport)
-        rejects(new Error('createWebRtcTransport error'));
-      
       if (maxIncomingBitrate) {
         // maxIncomingBitrate limit the incoming bandwidth from this transport
         try {
@@ -73,26 +77,27 @@ export class Client extends EventEmitter {
         if (transport) {
           this.downstreamTransports.push({
             transport,
-            associatedVideoPid: videoPid,
-            associatedAudioPid: audioPid,
+            associatedVideoPid: videoPid!,
+            associatedAudioPid: audioPid!,
           });
         }
       }
       resolve(clientTransportParams);
     });
   }
-  addProducer(kind, newProducer) {
+  
+  public addProducer(kind: MediaKind, newProducer: Producer) {
     this.producer[kind] = newProducer;
-
     if (kind === "audio") {
       // add this to our activeSpeakerObserver
       this.room.activeSpeakerObserver?.addProducer({
         producerId: newProducer.id,
       });
-      this.room.activeSpeakerList.push(newProducer.id);
+      this.room.activeSpeakerList.push(newProducer?.id);
     }
   }
-  addConsumer(kind, newConsumer, downstreamTransport) {
+
+  public addConsumer(kind: MediaKind, newConsumer: Consumer, downstreamTransport: DownstreamTransportType) {
     downstreamTransport[kind] = newConsumer;
   }
 }

@@ -1,12 +1,26 @@
-// @ts-nocheck
 // Rooms are not a MediaSoup thing. MS cares about mediastreams, transports,
 // things like that. It doesn't care, or know, about rooms.
 // Rooms can be inside of clients, clients inside of rooms,
 import { EventEmitter } from "node:events";
-import { config } from "./config.js";
-// transports can belong to rooms or clients, etc.
+import { Client } from "./Client";
+import { config } from "./config";
+import type { SocketIOType } from "./socket-server";
+import type { Message } from "./types";
+import type { ActiveSpeakerObserver, ActiveSpeakerObserverDominantSpeaker, Router, Worker } from "mediasoup/types";
+
 export class Room extends EventEmitter {
-  constructor(roomName, roomId, worker, io) {
+  private worker: Worker;
+  private io: SocketIOType;
+
+  public roomName: string;
+  public id: string;
+  public activeSpeakerObserver: ActiveSpeakerObserver | undefined;
+  public router: Router | undefined;
+  public clients: Client[] = [];
+  public messages: Message[] = [];
+  public activeSpeakerList: string[] = [];
+
+  constructor(roomName: string, roomId: string, worker: Worker, io: SocketIOType) {
     super();
     this.clients = [];
     this.messages = [];
@@ -16,31 +30,30 @@ export class Room extends EventEmitter {
     this.worker = worker;
     this.io = io;
   }
-  close() {
+
+  public close() {
     if (this.router) {
       this.router.close();
     }
     this.emit("close");
   }
-  addClient(client) {
+
+  public addClient(client: Client) {
     this.clients.push(client);
   }
-  addMessage(message) {
+
+  public addMessage(message: Message) {
     this.messages.push(message);
-    ``;
   }
-  removeClient(client) {
+
+  public removeClient(client: Client) {
     try {
       //const producerId = client.producer?.audio?.id;
-      const producerId = this.activeSpeakerList.find(
-        (c) => c === client.producer?.audio?.id
-      );
+      const producerId = this.activeSpeakerList.find((c) => c === client.producer?.audio?.id);
       if (producerId) {
         //console.log("activeSpeakerObserver removeProducer:", producerId);
         this.activeSpeakerObserver?.removeProducer({ producerId });
-        this.activeSpeakerList = this.activeSpeakerList.filter(
-          (ac) => ac !== producerId
-        );
+        this.activeSpeakerList = this.activeSpeakerList.filter((ac) => ac !== producerId);
         this.updateActiveSpeakers();
       }
       this.clients = this.clients.filter((c) => c.id !== client.id);
@@ -48,40 +61,21 @@ export class Room extends EventEmitter {
       console.log(error);
     }
   }
-  createRouter() {
-    return new Promise(async (resolve, _reject) => {
+
+  public createRouter() {
+    return new Promise<void>(async (resolve, _reject) => {
       this.router = await this.worker.createRouter({
         mediaCodecs: config.routerMediaCodecs,
       });
-      this.activeSpeakerObserver =
-        await this.router.createActiveSpeakerObserver({
-          interval: 300, //300 is default
-        });
-      this.activeSpeakerObserver.on("dominantspeaker", (ds) =>
-        this.newDominantSpeaker(ds)
-      );
+      this.activeSpeakerObserver = await this.router.createActiveSpeakerObserver({
+        interval: 300, //300 is default
+      });
+      this.activeSpeakerObserver.on("dominantspeaker", (ds) => this.newDominantSpeaker(ds));
       resolve();
     });
   }
-  newDominantSpeaker(ds) {
-    console.log("======ds======", ds.producer.id);
-    // look through this room's activeSpeakerList for this producer's pid
-    // we KNOW that it is an audio pid
-    const i = this.activeSpeakerList.findIndex((pid) => pid === ds.producer.id);
-    if (i > -1) {
-      // this person is in the list, and need to moved to the front
-      const [pid] = this.activeSpeakerList.splice(i, 1);
-      this.activeSpeakerList.unshift(pid);
-    } else {
-      // this is a new producer, just add to the front
-      this.activeSpeakerList.unshift(ds.producer.id);
-    }
-    //console.log(this.activeSpeakerList);
-    // PLACEHOLDER - the activeSpeakerlist has changed!
-    // updateActiveSpeakers = mute/unmute/get new transports
-    const newTransportsByPeer = this.updateActiveSpeakers();
-  }
-  updateActiveSpeakers() {
+
+  public updateActiveSpeakers() {
     //this function is called on newDominantSpeaker, or a new peer produces
     // mutes existing consumers/producer if below 5, for all peers in room
     // unmutes existing consumers/producer if in top 5, for all peers in room
@@ -89,7 +83,7 @@ export class Room extends EventEmitter {
     //called by either activeSpeakerObserver (newDominantSpeaker) or startProducing
     const activeSpeakers = this.activeSpeakerList.slice(0, 5);
     const mutedSpeakers = this.activeSpeakerList.slice(5);
-    const newTransportsByPeer = {};
+    const newTransportsByPeer: Record<string, string[]> = {};
     // loop through all connected clients in the room
     this.clients.forEach((client) => {
       // loop through all clients to mute
@@ -101,9 +95,7 @@ export class Room extends EventEmitter {
           client?.producer?.video.pause();
           return;
         }
-        const downstreamToStop = client.downstreamTransports.find(
-          (t) => t?.audio?.producerId === pid
-        );
+        const downstreamToStop = client.downstreamTransports.find((t) => t?.audio?.producerId === pid);
         if (downstreamToStop) {
           // found the audio, mute both
           downstreamToStop?.audio?.pause();
@@ -111,7 +103,7 @@ export class Room extends EventEmitter {
         } //no else. Do nothing if no match
       });
       // store all the pid's this client is not yet consuming
-      const newSpeakersToThisClient = [];
+      const newSpeakersToThisClient: string[] = [];
       activeSpeakers.forEach((pid) => {
         if (client?.producer?.audio?.id === pid) {
           // this client is the produer. Resume the producer
@@ -120,9 +112,7 @@ export class Room extends EventEmitter {
           return;
         }
         // can grab pid from the audio.producerId like above, or use our own associatedAudioPid
-        const downstreamToStart = client.downstreamTransports.find(
-          (t) => t?.associatedAudioPid === pid
-        );
+        const downstreamToStart = client.downstreamTransports.find((t) => t?.associatedAudioPid === pid);
         if (downstreamToStart) {
           // we have a match. Just resume
           downstreamToStart?.audio?.resume();
@@ -146,22 +136,58 @@ export class Room extends EventEmitter {
     this.io.to(this.id).emit("updateActiveSpeakers", activeSpeakers);
     this.updateProducersToConsume(newTransportsByPeer);
   }
-  updateProducersToConsume(newTransportsByPeer) {
-    for (const [socketId, audioPidsToCreate] of Object.entries(
-      newTransportsByPeer
-    )) {
+
+  public pidsToCreate() {
+    //fetch the first 0-5 pids in activeSpeakerList
+    const audioPidsToCreate = this.activeSpeakerList.slice(0, 5);
+    //find the videoPids and make an array with matching indicies
+    // for our audioPids.
+    const videoPidsToCreate = audioPidsToCreate.map((aid) => {
+      const producingClient = this.clients.find((c) => c?.producer?.audio?.id === aid);
+      return producingClient?.producer?.video?.id || "";
+    });
+    //find the username and make an array with matching indicies
+    // for our audioPids/videoPids.
+    const associatedUserNames = audioPidsToCreate.map((aid) => {
+      const producingClient = this.clients.find((c) => c?.producer?.audio?.id === aid);
+      return producingClient?.userName || "";
+    });
+    return {
+      audioPidsToCreate,
+      videoPidsToCreate,
+      associatedUserNames,
+    };
+  }
+
+  private newDominantSpeaker(ds: ActiveSpeakerObserverDominantSpeaker) {
+    console.log("======ds======", ds.producer.id);
+    // look through this room's activeSpeakerList for this producer's pid
+    // we KNOW that it is an audio pid
+    const i = this.activeSpeakerList.findIndex((pid) => pid === ds.producer.id);
+    if (i > -1) {
+      // this person is in the list, and need to moved to the front
+      const [pid] = this.activeSpeakerList.splice(i, 1);
+      this.activeSpeakerList.unshift(pid);
+    } else {
+      // this is a new producer, just add to the front
+      this.activeSpeakerList.unshift(ds.producer.id);
+    }
+    //console.log(this.activeSpeakerList);
+    // PLACEHOLDER - the activeSpeakerlist has changed!
+    // updateActiveSpeakers = mute/unmute/get new transports
+    this.updateActiveSpeakers();
+  }
+
+  private updateProducersToConsume(newTransportsByPeer: Record<string, string[]>) {
+    for (const [socketId, audioPidsToCreate] of Object.entries(newTransportsByPeer)) {
       // we have the audioPidsToCreate this socket needs to create
       // map the video pids and the username
       const videoPidsToCreate = audioPidsToCreate.map((aPid) => {
-        const producerClient = this.clients.find(
-          (c) => c?.producer?.audio?.id === aPid
-        );
+        const producerClient = this.clients.find((c) => c?.producer?.audio?.id === aPid);
         return producerClient?.producer?.video?.id || "";
       });
       const associatedUserNames = audioPidsToCreate.map((aPid) => {
-        const producerClient = this.clients.find(
-          (c) => c?.producer?.audio?.id === aPid
-        );
+        const producerClient = this.clients.find((c) => c?.producer?.audio?.id === aPid);
         return producerClient?.userName || "";
       });
       this.io.to(socketId).emit("newProducersToConsume", {
@@ -172,30 +198,5 @@ export class Room extends EventEmitter {
         activeSpeakerList: this.activeSpeakerList.slice(0, 5),
       });
     }
-  }
-  pidsToCreate() {
-    //fetch the first 0-5 pids in activeSpeakerList
-    const audioPidsToCreate = this.activeSpeakerList.slice(0, 5);
-    //find the videoPids and make an array with matching indicies
-    // for our audioPids.
-    const videoPidsToCreate = audioPidsToCreate.map((aid) => {
-      const producingClient = this.clients.find(
-        (c) => c?.producer?.audio?.id === aid
-      );
-      return producingClient?.producer?.video?.id || "";
-    });
-    //find the username and make an array with matching indicies
-    // for our audioPids/videoPids.
-    const associatedUserNames = audioPidsToCreate.map((aid) => {
-      const producingClient = this.clients.find(
-        (c) => c?.producer?.audio?.id === aid
-      );
-      return producingClient?.userName || "";
-    });
-    return {
-      audioPidsToCreate,
-      videoPidsToCreate,
-      associatedUserNames,
-    };
   }
 }

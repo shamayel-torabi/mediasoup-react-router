@@ -30,9 +30,7 @@ export async function logout(request: Request) {
 
 const USER_SESSION_KEY = "userId";
 
-export async function getUserId(
-  request: Request
-): Promise<User["id"] | undefined> {
+export async function getUserId(request: Request): Promise<User["id"] | undefined> {
   const session = await getUserSession(request);
   const userId = session.get(USER_SESSION_KEY) as string;
   return userId;

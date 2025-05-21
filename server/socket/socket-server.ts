@@ -8,15 +8,62 @@ import { Room } from "./Room.js";
 import { Client } from "./Client.js";
 import { config } from "./config.js";
 
-const PORT = config.port;
-const HOST = process.env.HOST || "localhost";
 const UUIDV5_NAMESPACE = "af6f650e-3ced-4f80-afef-f956afe3191d";
 
 //our globals
 let workers = [];
 const rooms = new Map();
 
-const runMediaSoupServer = async (app) => {
+interface ServerToClientEvents {
+  sendMessage: ({ text, userName, roomId }: { text: string; userName: string; roomId: string }) => void;
+  createRoom: (roomName: string, ackCb: (result: { roomId?: string; error?: string }) => void) => void;
+  joinRoom: (
+    data: { userName: string; roomId: string },
+    ackCb: ({
+      result,
+      error,
+    }: {
+      result?: {
+        routerRtpCapabilities: RtpCapabilities;
+        newRoom: boolean;
+        clientId: string;
+        audioPidsToCreate: string[];
+        videoPidsToCreate: string[];
+        associatedUserNames: string[];
+        messages: Message[];
+      };
+      error?: string;
+    }) => void
+  ) => void;
+  closeClient: (data: { roomId: string; clientId: string }, ackCb: (result: { status: string }) => void) => void;
+  closeRoom: (data: { roomId: string }, ackCb: (result: { status: string }) => void) => void;
+  requestTransport: (data: { type: string; audioPid?: string }, ackCb: (clientTransportParams: ClientTransportOptions) => void) => void;
+  connectTransport: (data: { dtlsParameters: DtlsParameters; type: string; audioPid?: string }, ackCb: (status: string) => void) => void;
+  startProducing: (data: { kind: MediaKind; rtpParameters: RtpParameters }, ackCb: (result: { producerId?: string; error?: unknown }) => void) => void;
+  audioChange: (typeOfChange: string) => void;
+  consumeMedia: (
+    data: {
+      rtpCapabilities: RtpCapabilities;
+      producerId: string;
+      kind: MediaKind;
+    },
+    ackCb: (result: { consumerOptions?: ClientParamsType; status?: string }) => void
+  ) => void;
+  unpauseConsumer: (data: { producerId: string; kind: MediaKind }, ackCb: ({ status }: { status: string }) => void) => void;
+}
+
+interface ClientToServerEvents {
+  connectionSuccess: (data: { socketId: string; rooms: RoomType[] }) => void;
+  newMessage: (message: Message) => void;
+  newRoom: (room: { roomId: string; roomName: string }) => void;
+  newProducersToConsume: (consumeData: ConsumeData) => void;
+  updateActiveSpeakers: (newListOfActives: string[]) => void;
+}
+
+export type SocketType = Socket<ServerToClientEvents, ClientToServerEvents>;
+export type SocketIOType = Namespace<ServerToClientEvents, ClientToServerEvents>;
+
+export const runMediaSoupServer = async (app: Express) => {
   workers = await createWorkers();
   const httpServer = createServer(app);
   // const socketio = new Server<ServerToClientEvents, ClientToServerEvents>(
@@ -27,7 +74,8 @@ const runMediaSoupServer = async (app) => {
   //     },
   //   }
   // );
-  const socketio = new Server(httpServer);
+  //const socketio = new Server(httpServer);
+  const socketio = new Server<ServerToClientEvents, ClientToServerEvents>(httpServer);
   const io = socketio.of("/ws");
   io.on("connection", (socket) => {
     console.log(`Peer connected: ${socket.id}`);
@@ -90,8 +138,7 @@ const runMediaSoupServer = async (app) => {
           const newRoom = requestedRoom.clients.length === 0;
           client = new Client(userName, requestedRoom, socket);
           socket.join(client.room.id);
-          const { audioPidsToCreate, videoPidsToCreate, associatedUserNames } =
-            client.room.pidsToCreate();
+          const { audioPidsToCreate, videoPidsToCreate, associatedUserNames } = client.room.pidsToCreate();
           ackCb({
             result: {
               routerRtpCapabilities: client.room.router?.rtpCapabilities,
@@ -121,10 +168,7 @@ const runMediaSoupServer = async (app) => {
         c?.close();
         ackCb({ status: "success" });
       } catch (error) {
-        const errorMessage =
-          error instanceof Error
-            ? error.message
-            : `Error Closing RoomId: ${roomId}`;
+        const errorMessage = error instanceof Error ? error.message : `Error Closing RoomId: ${roomId}`;
         console.log(errorMessage);
         ackCb({ status: errorMessage });
       }
@@ -136,10 +180,7 @@ const runMediaSoupServer = async (app) => {
         requestedRoom.close();
         ackCb({ status: "success" });
       } catch (error) {
-        const errorMessage =
-          error instanceof Error
-            ? error.message
-            : `Error Closing RoomId: ${roomId}`;
+        const errorMessage = error instanceof Error ? error.message : `Error Closing RoomId: ${roomId}`;
         console.log(errorMessage);
         ackCb({ status: errorMessage });
       }
@@ -155,15 +196,9 @@ const runMediaSoupServer = async (app) => {
           // we have 1 trasnport per client we are streaming from
           // each trasnport will have an audio and a video producer/consumer
           // we know the audio Pid (because it came from dominantSpeaker), get the video
-          const producingClient = client.room.clients.find(
-            (c) => c?.producer?.audio?.id === audioPid
-          );
+          const producingClient = client.room.clients.find((c) => c?.producer?.audio?.id === audioPid);
           const videoPid = producingClient?.producer?.video?.id;
-          clientTransportParams = await client.addTransport(
-            type,
-            audioPid,
-            videoPid
-          );
+          clientTransportParams = await client.addTransport(type, audioPid, videoPid);
         }
         ackCb(clientTransportParams);
       } catch (error) {
@@ -171,31 +206,28 @@ const runMediaSoupServer = async (app) => {
       }
     });
     socket.on("connectTransport", async ({ dtlsParameters, type, audioPid }, ackCb) => {
-        if (type === "producer") {
-          try {
-            await client.upstreamTransport?.connect({ dtlsParameters });
-            ackCb("success");
-          } catch (error) {
-            console.log(error);
-            ackCb("error");
-          }
-        } else if (type === "consumer") {
-          // find the right transport, for this consumer
-          try {
-            const downstreamTransport = client.downstreamTransports.find(
-              (t) => {
-                return t.associatedAudioPid === audioPid;
-              }
-            );
-            downstreamTransport?.transport.connect({ dtlsParameters });
-            ackCb("success");
-          } catch (error) {
-            console.log(error);
-            ackCb("error");
-          }
+      if (type === "producer") {
+        try {
+          await client.upstreamTransport?.connect({ dtlsParameters });
+          ackCb("success");
+        } catch (error) {
+          console.log(error);
+          ackCb("error");
+        }
+      } else if (type === "consumer") {
+        // find the right transport, for this consumer
+        try {
+          const downstreamTransport = client.downstreamTransports.find((t) => {
+            return t.associatedAudioPid === audioPid;
+          });
+          downstreamTransport?.transport.connect({ dtlsParameters });
+          ackCb("success");
+        } catch (error) {
+          console.log(error);
+          ackCb("error");
         }
       }
-    );
+    });
     socket.on("startProducing", async ({ kind, rtpParameters }, ackCb) => {
       // create a producer with the rtpParameters we were sent
       try {
@@ -204,16 +236,14 @@ const runMediaSoupServer = async (app) => {
           rtpParameters,
         });
 
-        if (!newProducer)
-          throw new Error("startProducing newProducer undefined");
+        if (!newProducer) throw new Error("startProducing newProducer undefined");
 
         //add the producer to this client obect
         client.addProducer(kind, newProducer);
 
         ackCb({ producerId: newProducer?.id });
       } catch (err) {
-        const errorMessage =
-          error instanceof Error ? error.message : "startProducing error";
+        const errorMessage = error instanceof Error ? error.message : "startProducing error";
         console.log(errorMessage);
         ackCb({ error: err });
       }
@@ -233,56 +263,49 @@ const runMediaSoupServer = async (app) => {
       }
     });
     socket.on("consumeMedia", async ({ rtpCapabilities, producerId, kind }, ackCb) => {
-        // will run twice for every peer to consume... once for video, once for audio
-        console.log("Kind: ", kind, "   producerId:", producerId);
-        // we will set up our clientConsumer, and send back the params
-        // use the right transport and add/update the consumer in Client
-        // confirm canConsume
-        try {
-          if (
-            !client.room.router?.canConsume({ producerId, rtpCapabilities })
-          ) {
-            ackCb({ status: "cannotConsume" });
-          } else {
-            // we can consume!
-            const downstreamTransport = client.downstreamTransports.find(
-              (t) => {
-                if (kind === "audio") {
-                  return t.associatedAudioPid === producerId;
-                } else if (kind === "video") {
-                  return t.associatedVideoPid === producerId;
-                }
-              }
-            );
+      // will run twice for every peer to consume... once for video, once for audio
+      console.log("Kind: ", kind, "   producerId:", producerId);
+      // we will set up our clientConsumer, and send back the params
+      // use the right transport and add/update the consumer in Client
+      // confirm canConsume
+      try {
+        if (!client.room.router?.canConsume({ producerId, rtpCapabilities })) {
+          ackCb({ status: "cannotConsume" });
+        } else {
+          // we can consume!
+          const downstreamTransport = client.downstreamTransports.find((t) => {
+            if (kind === "audio") {
+              return t.associatedAudioPid === producerId;
+            } else if (kind === "video") {
+              return t.associatedVideoPid === producerId;
+            }
+          });
 
-            if (!downstreamTransport)
-              throw new Error("consumeMedia downstreamTransport undefined");
+          if (!downstreamTransport) throw new Error("consumeMedia downstreamTransport undefined");
 
-            // create the consumer with the transport
-            const newConsumer = await downstreamTransport.transport.consume({
-              producerId,
-              rtpCapabilities,
-              paused: true, //good practice
-            });
-            // add this newCOnsumer to the CLient
-            client.addConsumer(kind, newConsumer, downstreamTransport);
-            // respond with the params
-            const clientParams = {
-              producerId,
-              id: newConsumer?.id,
-              kind: newConsumer?.kind,
-              rtpParameters: newConsumer?.rtpParameters,
-            };
-            ackCb({ consumerOptions: clientParams });
-          }
-        } catch (err) {
-          const errorMessage =
-            error instanceof Error ? error.message : "consumeMedia error";
-          console.log(errorMessage);
-          ackCb({ status: "consumeFailed" });
+          // create the consumer with the transport
+          const newConsumer = await downstreamTransport.transport.consume({
+            producerId,
+            rtpCapabilities,
+            paused: true, //good practice
+          });
+          // add this newCOnsumer to the CLient
+          client.addConsumer(kind, newConsumer, downstreamTransport);
+          // respond with the params
+          const clientParams = {
+            producerId,
+            id: newConsumer?.id,
+            kind: newConsumer?.kind,
+            rtpParameters: newConsumer?.rtpParameters,
+          };
+          ackCb({ consumerOptions: clientParams });
         }
+      } catch (err) {
+        const errorMessage = error instanceof Error ? error.message : "consumeMedia error";
+        console.log(errorMessage);
+        ackCb({ status: "consumeFailed" });
       }
-    );
+    });
     socket.on("unpauseConsumer", async ({ producerId, kind }, ackCb) => {
       try {
         const consumerToResume = client.downstreamTransports.find((t) => {
@@ -298,8 +321,6 @@ const runMediaSoupServer = async (app) => {
       }
     });
   });
-  httpServer.listen(PORT, () => {
-    console.log(`Server is running on http://${HOST}:${PORT}`);
-  });
+
+  return httpServer;
 };
-export default runMediaSoupServer;

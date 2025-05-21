@@ -4,8 +4,10 @@ services:
     image: mediasoup-server-react:1.0.0
     environment:
       - DATABASE_URL=file:/app/data/dev.db
+      - HOST=localhost
+      - PORT=3000
     ports:
       - "3000:3000"
-      - "40000-41000:40000-41000" 
+      - "40000-40100:40000-40100" 
     volumes:
       - ./app-data:/app/data
