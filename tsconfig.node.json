@@ -1,9 +1,7 @@
 {
   "extends": "./tsconfig.json",
   "include": [
-    "server-lib/**/*",
     "server.js",
-    "tailwind.config.ts",
     "vite.config.ts"
   ],
   "compilerOptions": {
