@@ -25,7 +25,6 @@ RUN apt update && apt install libssl-dev -y --no-install-recommends
 FROM production
 COPY ./package.json package-lock.json /app/
 COPY ./server.prod.js /app/server.js
-#COPY ./prisma /app/prisma
 COPY --from=mediasoup-server-prod /app/node_modules /app/node_modules
 COPY --from=build-env /app/build /app/build
 COPY --from=build-env /app/app/generated/prisma/libquery_engine-debian-openssl-3.0.x.so.node /app/build/server/assets/libquery_engine-debian-openssl-3.0.x.so.node

@@ -3,7 +3,7 @@ import { Room } from "./Room";
 import { config } from "./config";
 import type { DownstreamTransportType } from "./types";
 import type { Consumer, MediaKind, Producer, WebRtcTransport } from "mediasoup/types";
-import type { SocketType } from "./socket-server";
+import type { SocketType } from "./createSocketServer";
 
 export class Client extends EventEmitter {
   public id: string;

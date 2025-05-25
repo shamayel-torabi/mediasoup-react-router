@@ -20,7 +20,7 @@ app.use(express.static("build/client", { maxAge: "1h" }));
 app.use(await import(BUILD_PATH).then((mod) => mod.app));
 app.use(morgan("tiny"));
 
-const httpServer = await import(BUILD_PATH_SOCKET).then((mod) => mod.runMediaSoupServer(app));
+const httpServer = await import(BUILD_PATH_SOCKET).then((mod) => mod.createSocketServer(app));
 httpServer.listen(PORT, () => {
   console.log(`Server is running on http://${HOST}:${PORT}`);
 });

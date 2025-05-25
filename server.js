@@ -36,13 +36,13 @@ if (DEVELOPMENT) {
       next(error);
     }
   });
-  httpServer = await viteDevServer.ssrLoadModule("./server/socket/socket-server.ts").then((mod) => mod.runMediaSoupServer(app));
+  httpServer = await viteDevServer.ssrLoadModule("./server/socket/createSocketServer.ts").then((mod) => mod.createSocketServer(app));
 } else {
   console.log("Starting production server");
   app.use("/assets", express.static("build/client/assets", { immutable: true, maxAge: "1y" }));
   app.use(express.static("build/client", { maxAge: "1h" }));
   app.use(await import(BUILD_PATH).then((mod) => mod.app));
-  httpServer = await import(BUILD_PATH_SOCKET).then((mod) => mod.runMediaSoupServer(app));
+  httpServer = await import(BUILD_PATH_SOCKET).then((mod) => mod.createSocketServer(app));
 }
 
 app.use(morgan("tiny"));

@@ -4,7 +4,7 @@
 import { EventEmitter } from "node:events";
 import { Client } from "./Client";
 import { config } from "./config";
-import type { SocketIOType } from "./socket-server";
+import type { SocketIOType } from "./createSocketServer";
 import type { Message } from "./types";
 import type { ActiveSpeakerObserver, ActiveSpeakerObserverDominantSpeaker, Router, Worker } from "mediasoup/types";
 

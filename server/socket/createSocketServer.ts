@@ -63,7 +63,7 @@ interface ClientToServerEvents {
 export type SocketType = Socket<ServerToClientEvents, ClientToServerEvents>;
 export type SocketIOType = Namespace<ServerToClientEvents, ClientToServerEvents>;
 
-export const runMediaSoupServer = async (app: Express) => {
+export const createSocketServer = async (app: Express) => {
   workers = await createWorkers();
   const httpServer = createServer(app);
   // const socketio = new Server<ServerToClientEvents, ClientToServerEvents>(
